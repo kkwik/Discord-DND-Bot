@@ -12,18 +12,22 @@ import java.util.concurrent.TimeUnit;
 public class Actions extends ListenerAdapter {
 
     @Override   //This method is triggered everytime a message is sent in the discord server
-    public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
+    public void onGuildMessageReceived(GuildMessageReceivedEvent event)
+    {
         if(!event.getAuthor().isBot() && Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message sent is from a bot, then ignore it
             topLevelHandler(new MessageEvent(event));
     }
 
     @Override   //This method is triggered by private messages to the bot
-    public void onPrivateMessageReceived(PrivateMessageReceivedEvent event) {
+    public void onPrivateMessageReceived(PrivateMessageReceivedEvent event)
+    {
         if(!event.getAuthor().isBot())   //If the message sent is from a bot, then ignore it
             topLevelHandler(new MessageEvent(event));
     }
 
-    private void topLevelHandler(MessageEvent messageEvent) {
+    //This method separates the first string separated by " " and uses a switch on that term to determine what to do
+    private void topLevelHandler(MessageEvent messageEvent)
+    {
         String message = messageEvent.getMessage().toUpperCase();
         if(message.length() < 2 || message.charAt(0) != ';')
             return;
@@ -52,163 +56,192 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    private void spellCommandHandler(String searchTerm, MessageChannel channel) {
-        String searchSpell = searchTerm.replaceAll("[^A-Z]","");
-        if(searchSpell.length() == 0) {   //If the searchTerm is symbols return because it is invalid
+    //;spell command. Returns an image of the spell or a list of similar spells. Note: images of the PHB are not included in this repository
+    //Format: ;spell [string here]. ex. ";spell fire bolt"
+    private void spellCommandHandler(String searchTerm, MessageChannel channel)
+    {
+        if(searchTerm.equals("HELP") || searchTerm.equals("H"))
+        {
+            channel.sendMessage(Character.toString((char)32)).embed(new EmbedBuilder().setDescription("Spell Command - Returns an image of the spell or a list of similar spells.\nFormat: ;spell [string here]\nEx. \";spell Aid\"").build()).queue();
+            return;
+        }
+
+        String searchSpell = searchTerm.replaceAll("[^A-Z]",""); //searchSpell is all caps letters only
+        if(searchSpell.length() == 0)
+        {   //If the searchTerm is symbols return because it is invalid
             channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
             return;
         }
 
+        /*  Search through spells   */
         ArrayDeque<dndSpells> matches = new ArrayDeque<>();
         dndSpells exactMatch = null;
-
         if(dndSpells.isValid(searchSpell))
-        {
+        {//The searchSpell is the exact name of a spell
             exactMatch = dndSpells.valueOf(searchSpell);
         }
         else
-        {
-            for(dndSpells sp : EnumSet.allOf(dndSpells.class))                              //Go through the list of spells in reverse order.
-                if (sp.name().contains(searchSpell))     //If the spell we are currently comparing against contains the term we are searching for
-                    matches.addLast(sp);
+        {//Iterate through all spells in dndSpells create a list of spells who contain a substring of searchSpell
+            for(dndSpells searchAgainstSpell : EnumSet.allOf(dndSpells.class))                              //Go through the list of spells in reverse order.
+                if (searchAgainstSpell.name().contains(searchSpell))     //If the spell we are currently comparing against contains the term we are searching for
+                    matches.addLast(searchAgainstSpell);
         }
 
-        //Results
+        /*  Handle results  */
         if(exactMatch != null || matches.size() == 1)
-        {
+        {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
             //File imageFile = new File(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParentFile() + Main.FILE_SEPARATOR +"Images" + Main.FILE_SEPARATOR + imageName + ".png");
             File imageFile = new File("Images\\" + imageName + ".png");
 
-            if(imageFile.exists()) //If a file by that name exists in the working directory then send it
+            if(imageFile.exists())
                 channel.sendFile(imageFile, "image.png").embed(new EmbedBuilder().setImage("attachment://image.png").setDescription("Ah... here it is:").build()).queue();
-            else    //Print that something has gone wrong
-                channel.sendMessage("Curious... I know of that file but cannot find it!\n[FILE IMAGE NOT FOUND]").queue();
+            else    //File not found
+                channel.sendMessage("Curious... I know of that file but cannot find it in my library!\naka File not Found").queue();
             return;
         }
-        else if(matches.size() != 0)    //If similar spells were found
-        {
+        else if(matches.size() != 0)
+        {//Multiple spells were found that contained searchSpell. ex. searchSpell = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
             String response = "Hmm... I found a couple of spells that remind me of that one:\n";
-            while(matches.size() != 0) //Go through all the spells that contained the searchTerm and print them out
+            while(matches.size() != 0) //Go through all the spells that contained the searchSpell and print them out
                 response.concat(matches.removeFirst().toString() + '\n');
             largeMessageSender(response, channel);
             return;
         }
-        else        //No spell contained the searchTerm
-        {
+        else
+        {   //No spell contained the searchSpell
             channel.sendMessage("I'm sorry, but I couldn't find that spell.").queue();
             return;
         }
     }
 
-    private void spellListCommandHandler(String searchTerm, MessageChannel channel) {
-        String[] terms = searchTerm.split(" ");
-        if(terms.length == 0) {
-            channel.sendMessage("ERROR MESSAGE").queue();
+    //;spellList command. Searches through the dndSpells enum and responds with a list of all spells matching the query
+    //Format: ;spellList class:[class] level:[level] school:[school]. ex. ";spellList class:Bard level:0 school:evocation"
+    //You can include multiple of a single argument (ie "class:Bard class:Wizard") and it will be treated as OR
+    private void spellListCommandHandler(String searchTerm, MessageChannel channel)
+    {
+        if(searchTerm.equals("HELP") || searchTerm.equals("H"))
+        {
+            channel.sendMessage(Character.toString((char)32)).embed(new EmbedBuilder().setDescription("SpellList Command - Searches spells with criteria and returns a list of matching spells.\nFormat: ;spellList [series of arguments]. \nPotential arguments are Class:, Level:, and School:\nEx. \";spellList class:Bard class:Wizard level:0 school:evocation\"\nNotably using multiple arguments of the same type (class:wizard class:bard) will return a list of spells which have any of the characteristics.\nUsing different types of arguments (class:wizard level:0) will return a list of spells that fit both of those characteristics.").build()).queue();
             return;
         }
 
-        //Parse argument
-        ArrayList<dndClasses> classFilter = new ArrayList<>();
-        ArrayList<Byte> levelFilter = new ArrayList<>();
-        ArrayList<dndSpellSchool> schoolFilter = new ArrayList<>();
+        String[] terms = searchTerm.split(" ");
+        if(terms.length == 0)
+        {   //If ";spellList" is called alone
+            channel.sendMessage("Please add some filters to that").queue();
+            return;
+        }
+
+        /*  Parse Command   */
+        ArrayList<dndClasses> classFilter = new ArrayList<>();      //Holds every class to look for
+        ArrayList<Byte> levelFilter = new ArrayList<>();            //Holds every level to look for
+        ArrayList<dndSpellSchool> schoolFilter = new ArrayList<>(); //Holds every school to look for
         for(String arg : terms)
-        {
+        {//Iterate through every space separated string and parse it
             if (arg.startsWith("CLASS:") || arg.startsWith("C:"))
-            {
+            {   //Parse class: argument
                 String argClass = arg.split(":")[1];
                 if (dndClasses.isValid(argClass))
-                {
+                {   //Class: represents a valid class name, add it to filter list
                     classFilter.add(dndClasses.valueOf(argClass));
                 }
                 else
-                {
-                    channel.sendMessage("Invalid Class Name: " + argClass).queue();
+                {   //Invalid class name, exit
+                    channel.sendMessage(String.format("Hmm... I've never heard of that class before. What is a `%s`?", argClass)).queue();
                     return;
                 }
             }
             else if (arg.startsWith("LEVEL:") || arg.startsWith("LVL:") || arg.startsWith("L:"))
-            {
-
-                char argLevel = arg.split(":")[1].charAt(0);
-                if(48 <= argLevel && argLevel <= 57)
+            {   //Parse level: argument
+                byte argLevel = -1;
+                String sArgLevel = arg.split(":")[1];
+                try
                 {
-                    levelFilter.add(Byte.parseByte(Character.toString(argLevel)));
+                    argLevel = Byte.parseByte(sArgLevel);
+                    if(argLevel < 0 || 9 < argLevel)
+                        throw new NumberFormatException();
                 }
-                else
+                catch(NumberFormatException e)
                 {
-                    channel.sendMessage("Invalid Spell Level: " + argLevel).queue();
+                    channel.sendMessage(String.format("I've never heard of a spell level being `%s` before. Usually they are between 0 and 9.", sArgLevel)).queue();
                     return;
                 }
+                //Not ideal, but the above try-catch ensures argLevel is a) numerical b) within byte range and c) within our spellLevel range.
+                //a) and c) were fairly easily solved, but I couldn't solve b) without try-catch so I use it to test all three conditions.
+                levelFilter.add(argLevel);
             }
             else if(arg.startsWith("SCHOOL:") || arg.startsWith("S:"))
-            {
+            {   //Parse level: school
                 String argSchool = arg.split(":")[1];
                 if(dndSpellSchool.isValid(argSchool))
-                {
+                {   //If school: is valid, add it to the filter
                     schoolFilter.add(dndSpellSchool.valueOf(argSchool));
                 }
                 else
-                {
-                    channel.sendMessage("Invalid School Name: " + argSchool).queue();
+                {   //Invalid school name
+                    channel.sendMessage(String.format("I've never heard of the `%s` school of magic before, where are they from?", argSchool)).queue();
                     return;
                 }
             }
             else
-            {
-                channel.sendMessage("Invalid Argument: " + arg).queue();
+            {   //Argument is not class: c: level: lvl: l: school: or s:
+                channel.sendMessage(String.format("I can only search by class, level, and school, not by `%s`. Try \";spellList help\"", arg)).queue();
                 return;
             }
         }
 
-        //Search spells
+        /*  Search through spell enum for spell that matches filters   */
         ArrayDeque<String> spellList = new ArrayDeque<>();
         for(dndSpells spell : EnumSet.allOf(dndSpells.class))
         {
-                boolean classPass = false, levelPass = false, schoolPass = false;
-                //Testing class filter
-                if(classFilter.size() == 0)//No filter specified
-                    classPass = true;
-                else
+            boolean classPass = false, levelPass = false, schoolPass = false;   //Default to fail
+
+            if(classFilter.size() == 0)
+                classPass = true;   //If no class filter is specified, then set to true. We don't need to search
+            else
+            {   //Go through the classes 'spell' is used by, and if any class on the filter matches then set to true
+                dndClasses[] spellClasses = spell.getSpellClasses();
+                for(dndClasses cl : spellClasses)
                 {
-                    dndClasses[] spellClasses = spell.getSpellClasses();
-                    for(dndClasses cl : spellClasses)
+                    if(classFilter.contains(cl))
                     {
-                        if(classFilter.contains(cl))
-                            classPass = true;
+                        classPass = true;
+                        break;
                     }
                 }
+            }
 
             if(levelFilter.size() == 0)
-                levelPass = true;
+                levelPass = true;   //If no level filter is specified, then set to true. We don't need to search
             else
-            {
+            {   //If the level of 'spell' is the same as any on the levelFilter list then set to true
                 byte spellLevel = spell.getLevel();
                 if(levelFilter.contains(spellLevel))
                     levelPass = true;
             }
 
-            if(schoolFilter.size() == 0)//No filter specified
+            if(schoolFilter.size() == 0)    //If no school filter is specified, then set to true. We don't need to search
                 schoolPass = true;
             else
-            {
+            {   //If the school of 'spell' is the same as any on the schoolFilter list then set to true
                 dndSpellSchool spellSchool = spell.getSchool();
                 if(schoolFilter.contains(spellSchool))
                     schoolPass = true;
             }
 
-            if(classPass && levelPass && schoolPass)
+            if(classPass && levelPass && schoolPass)    //If class, level, and school are true then add to list.
                 spellList.addLast(spell.toString());
         }
 
         //Results
         if(spellList.size() == 0)
-        {
+        {   //Zero spells matched the filters
             channel.sendMessage("I didn't find any spell that matched those characteristics").queue();
             return;
         }
         else
-        {
+        {   //List all the spells that matched the filters
             String response = "Hmm... These spells match your request:\n";
             while(spellList.size() != 0) //Go through all the spells that contained the searchTerm and print them out
                 response += spellList.removeFirst().toString() + '\n';
@@ -217,22 +250,23 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    private void classCommandHandler(String searchTerm, MessageChannel channel){
-
+    private void classCommandHandler(String searchTerm, MessageChannel channel)
+    {
+        
     }
 
-    private void adminCommandHandler(String term, User author, MessageChannel channel) {
-        if(author.getIdLong() != PersonalData.ADMIN_ID)
+    private void adminCommandHandler(String term, User author, MessageChannel channel)
+    {
+        if(author.getIdLong() != PersonalData.ADMIN_ID) //Only allow ADMIN to use these commands
             return;
 
         String[] parsedMessage = separateFirstTerm(term);
         switch(parsedMessage[0])
         {
-            case "SHUTDOWN":
+            case "SHUTDOWN":    //Stop execution of bot
                 channel.sendMessage("Shutting down...").queue();
-                try{ TimeUnit.SECONDS.sleep(1);}
-                catch(Exception e){}
-                System.exit(0);
+                Main.bot.shutdown();    //Shutdown JDA
+                System.exit(0); //Exit execution
                 break;
 
             case "UPTIME":
@@ -249,7 +283,8 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    private void guildCommandHandler(String term, MessageChannel channel) {
+    private void guildCommandHandler(String term, MessageChannel channel)
+    {
         String[] parsedMessage = separateFirstTerm(term);
         switch(parsedMessage[0])
         {
@@ -276,7 +311,8 @@ public class Actions extends ListenerAdapter {
     }
 
     //Turns "spell Hello World" into {"spell", "Hello World"} or "help" into {"help", ""}
-    private String[] separateFirstTerm(String term) {
+    private String[] separateFirstTerm(String term)
+    {
         if(term.contains(" ")) {
             int spaceIndex = term.indexOf(' ');
             return new String[]{term.substring(0, spaceIndex), term.substring(spaceIndex+1, term.length())};
@@ -285,7 +321,8 @@ public class Actions extends ListenerAdapter {
     }
 
     //used to send text messages that might be very large. Breaks the message down into smaller chunks
-    private void largeMessageSender(String message, MessageChannel channel) {
+    private void largeMessageSender(String message, MessageChannel channel)
+    {
         while(message.length() > 1999)
         {
             int messageEndPoint = message.substring(0, 1999).lastIndexOf('\n');
