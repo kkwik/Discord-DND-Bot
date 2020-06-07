@@ -14,15 +14,19 @@ public class Actions extends ListenerAdapter {
     @Override   //This method is triggered everytime a message is sent in the discord server
     public void onGuildMessageReceived(GuildMessageReceivedEvent event)
     {
-        if(!event.getAuthor().isBot() && Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message sent is from a bot, then ignore it
-            topLevelHandler(new MessageEvent(event));
+        if(event.getAuthor().isBot() || !Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message sent is from a bot, then ignore it
+            return;
+        long start = System.currentTimeMillis();
+        topLevelHandler(new MessageEvent(event));
+        System.out.println(System.currentTimeMillis()-start);
     }
 
     @Override   //This method is triggered by private messages to the bot
     public void onPrivateMessageReceived(PrivateMessageReceivedEvent event)
     {
-        if(!event.getAuthor().isBot())   //If the message sent is from a bot, then ignore it
-            topLevelHandler(new MessageEvent(event));
+        if(event.getAuthor().isBot())   //If the message sent is from a bot, then ignore it
+            return;
+        topLevelHandler(new MessageEvent(event));
     }
 
     //This method separates the first string separated by " " and uses a switch on that term to determine what to do
@@ -42,7 +46,7 @@ public class Actions extends ListenerAdapter {
                 spellListCommandHandler(parsedMessage[1], messageEvent.getChannel());
                 break;
             case "CLASS":
-                messageEvent.getChannel().sendMessage("Not implemented.").queue();
+                classCommandHandler(parsedMessage[1], messageEvent.getChannel());
                 break;
             case "BOT":
                 adminCommandHandler(parsedMessage[1], messageEvent.getAuthor(), messageEvent.getChannel());
@@ -84,27 +88,22 @@ public class Actions extends ListenerAdapter {
         {//Iterate through all spells in dndSpells create a list of spells who contain a substring of searchSpell
             for(dndSpells searchAgainstSpell : EnumSet.allOf(dndSpells.class))                              //Go through the list of spells in reverse order.
                 if (searchAgainstSpell.name().contains(searchSpell))     //If the spell we are currently comparing against contains the term we are searching for
-                    matches.addLast(searchAgainstSpell);
+                    matches.add(searchAgainstSpell);
         }
 
         /*  Handle results  */
         if(exactMatch != null || matches.size() == 1)
         {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
-            //File imageFile = new File(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParentFile() + Main.FILE_SEPARATOR +"Images" + Main.FILE_SEPARATOR + imageName + ".png");
-            File imageFile = new File("Images\\" + imageName + ".png");
 
-            if(imageFile.exists())
-                channel.sendFile(imageFile, "image.png").embed(new EmbedBuilder().setImage("attachment://image.png").setDescription("Ah... here it is:").build()).queue();
-            else    //File not found
-                channel.sendMessage("Curious... I know of that file but cannot find it in my library!\naka File not Found").queue();
+            imageSender("PHB\\Spells\\" + imageName + ".png", "Ah... here it is:", channel);
             return;
         }
         else if(matches.size() != 0)
         {//Multiple spells were found that contained searchSpell. ex. searchSpell = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
             String response = "Hmm... I found a couple of spells that remind me of that one:\n";
             while(matches.size() != 0) //Go through all the spells that contained the searchSpell and print them out
-                response.concat(matches.removeFirst().toString() + '\n');
+                response += matches.removeFirst().toString() + '\n';
             largeMessageSender(response, channel);
             return;
         }
@@ -252,7 +251,48 @@ public class Actions extends ListenerAdapter {
 
     private void classCommandHandler(String searchTerm, MessageChannel channel)
     {
-        
+        if(searchTerm.equals("HELP") || searchTerm.equals("H"))
+        {
+            channel.sendMessage(Character.toString((char)32)).embed(new EmbedBuilder().setDescription("Class Command - Returns an image of class info.\nFormat: ;spell [class name]\nYou can specify table, class, path.\nEx. \";class bard\"").build()).queue();
+            return;
+        }
+        String[] parsedMessage = searchTerm.split(" ");
+        if(parsedMessage.length == 0 || parsedMessage.length > 2)
+        {
+            channel.sendMessage("Too many or too few arguments. Use 1 or 2.").queue();
+            return;
+        }
+
+        if(!dndClasses.isValid(parsedMessage[0]))
+        {
+            channel.sendMessage("Invalid class name").queue();
+            return;
+        }
+
+        String className = parsedMessage[0];
+        if(parsedMessage.length == 1)
+        {
+            imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png", "", channel);
+            imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Class.png", "", channel);
+            imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Paths.png", "", channel);
+            return;
+            //File imageFile = new File("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png");    //Used for IDE testing
+            //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar
+        }
+        else
+        {
+            String specifier = parsedMessage[1];
+            if(("TABLESLEVELUP").contains(specifier))
+                imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png", "", channel);
+            else if(("CLASSESFEATURESFEATS").contains(specifier))
+                imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Class.png", "", channel);
+            else if(("PATHSCOLLEGESDOMAINSCIRCLESARCHETYPESWAYSTRADITIONSOATHSORIGINSPATRONSSCHOOLS").contains(specifier))
+                imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Paths.png", "", channel);
+            else
+            {
+                channel.sendMessage("I don't get that").queue();
+            }
+        }
     }
 
     private void adminCommandHandler(String term, User author, MessageChannel channel)
@@ -332,4 +372,15 @@ public class Actions extends ListenerAdapter {
         if(message.length() > 0)
             channel.sendMessage(message).queue();
     }
+
+    private void imageSender(String path, String optionalMessage, MessageChannel channel)
+    {
+        File imageFile = new File(path);    //Used for IDE testing
+        //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar
+        if(imageFile.exists())
+            channel.sendFile(imageFile, "image.png").embed(new EmbedBuilder().setImage("attachment://image.png").setDescription(optionalMessage).build()).queue();
+        else
+            channel.sendMessage("Curious... I know of that file but cannot find it in my library!\naka File not Found").queue();
+    }
+
 }
