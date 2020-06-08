@@ -1,6 +1,7 @@
 import java.util.EnumSet;
 import java.util.HashSet;
 
+//Enum that determines what a valid class is
 public enum dndClasses {
     BARBARIAN, BARD, CLERIC, DRUID, FIGHTER, MONK, PALADIN, RANGER, ROGUE, SORCERER, WARLOCK, WIZARD;
 

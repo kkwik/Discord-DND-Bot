@@ -1,4 +1,5 @@
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.User;
@@ -13,14 +14,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
-import java.util.HashMap;
 
 public class Actions extends ListenerAdapter {
 
     @Override   //This method is triggered everytime a message is sent in the discord server
     public void onGuildMessageReceived(final GuildMessageReceivedEvent event)
     {
-        if(event.getAuthor().isBot() || !Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message sent is from a bot, then ignore it
+        if(!event.getChannel().canTalk() || event.getAuthor().isBot() || !Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message was sent in a channel our bot can't respond in, by a bot, or isn't on the whitelist then ignore it
             return;
         topLevelHandler(new MessageEvent(event));
     }
@@ -88,7 +88,6 @@ public class Actions extends ListenerAdapter {
         if(dndSpells.isValid(searchSpell))
         {//The searchSpell is the exact name of a spell
             exactMatch = dndSpells.valueOf(searchSpell);
-            System.out.println("exact");
         }
         else
         {//Iterate through all spells in dndSpells create a list of spells who contain a substring of searchSpell
@@ -101,9 +100,7 @@ public class Actions extends ListenerAdapter {
         if(exactMatch != null || matches.size() == 1)
         {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
-
-            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Spells" + Main.FILE_SEPARATOR + imageName + ".png", "", channel);
-            //imageSender("PHB\\Spells\\" + imageName + ".png", "Ah... here it is:", channel);
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName + ".png", "", channel);
             return;
         }
         else if(matches.size() != 0)
@@ -291,22 +288,20 @@ public class Actions extends ListenerAdapter {
         final String className = parsedMessage[0];
         if(parsedMessage.length == 1)
         {   //If only the class name is used, send all images
-            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
-            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
-            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Path.png", "", channel);
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Paths.png", "", channel);
             return;
-            //File imageFile = new File("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png");    //Used for IDE testing
-            //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar
         }
         else
         {   //If a specifier is used, check against a series of possible inputs to determine what to do
             final String specifier = parsedMessage[1];
             if(("TABLESLEVELUP").contains(specifier))
-                imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
+                imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
             else if(("CLASSESFEATURESFEATS").contains(specifier))
-                imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
+                imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
             else if(("PATHSCOLLEGESDOMAINSCIRCLESARCHETYPESWAYSTRADITIONSOATHSORIGINSPATRONSSCHOOLS").contains(specifier))
-                imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Path.png", "", channel);
+                imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Paths.png", "", channel);
             else
             {   //Specifier is not a valid input
                 channel.sendMessage("I don't get that").queue();
@@ -327,6 +322,9 @@ public class Actions extends ListenerAdapter {
         {
             case "SHUTDOWN":    //Stop execution of bot
                 channel.sendMessage("Shutting down...").queue();
+                try{ TimeUnit.SECONDS.sleep(1);}    //Delay is necessary to properly display shutdown message
+                catch(Exception e){}
+                Main.bot.getPresence().setStatus(OnlineStatus.OFFLINE);
                 Main.bot.shutdown();    //Shutdown JDA
                 System.exit(0); //Exit execution
                 break;
@@ -342,6 +340,10 @@ public class Actions extends ListenerAdapter {
 
             case "USAGE":   //Get readouts of how much the bot has been used
                 usageCommandHandler(parsedMessage[1], channel);
+                break;
+
+            case "VERSION":
+                channel.sendMessage("Version made and built on 6/7/2020").queue();
                 break;
 
             default:
@@ -447,7 +449,6 @@ public class Actions extends ListenerAdapter {
     private void imageSender(final String path, final String optionalMessage, final MessageChannel channel)
     {
         File imageFile = new File(path);    //Used for IDE testing
-        //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar
         if(imageFile.exists())
             channel.sendFile(imageFile, "image.png").embed(new EmbedBuilder().setImage("attachment://image.png").setDescription(optionalMessage).build()).queue();
         else

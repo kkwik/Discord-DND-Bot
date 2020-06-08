@@ -3,6 +3,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 
+//Enum that determines what a valid spell is. Each field contains a properly formatted string name, it's level, school, and an array of what classes can use the spell
 public enum dndSpells {
     ACIDSPLASH ("Acid Splash", (byte)0, dndSpellSchool.CONJURATION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WIZARD}),
     AID ("Aid", (byte)2, dndSpellSchool.ABJURATION, new dndClasses[]{dndClasses.CLERIC, dndClasses.PALADIN}),

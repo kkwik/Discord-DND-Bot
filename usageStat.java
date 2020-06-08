@@ -1,3 +1,5 @@
+//Used to log when and where a command was called from
+
 public class usageStat {
     private final long guildId;
     private final long timeStamp;

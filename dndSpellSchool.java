@@ -1,6 +1,7 @@
 import java.util.EnumSet;
 import java.util.HashSet;
 
+//Enum that determines what a valid school for a spell is
 public enum dndSpellSchool {
     ABJURATION, CONJURATION, DIVINATION, ENCHANTMENT, EVOCATION, ILLUSION, NECROMANCY, TRANSMUTATION;
 
