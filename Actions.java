@@ -343,7 +343,7 @@ public class Actions extends ListenerAdapter {
                 break;
 
             case "VERSION":
-                channel.sendMessage("Version made and built on 6/7/2020").queue();
+                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/cb8cb0f5d0b1fc318c2ce33c4a6ebc0e0044e8e4").queue();
                 break;
 
             default:
@@ -354,7 +354,7 @@ public class Actions extends ListenerAdapter {
     //Admin command used to printout interesting bot usage statistics
     private void usageCommandHandler(final String term, final MessageChannel channel) {
         long currTime = System.currentTimeMillis();
-        String response = String.format("\nTotal calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
+        String response = String.format("Total calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
         response += String.format("Calls in last hour: %d\n\n", Main.usageStatQueue.size());  //Print out amount of times the bot was called in the past hour
 
         final List<Guild> guildList = Main.bot.getGuilds();
@@ -375,7 +375,7 @@ public class Actions extends ListenerAdapter {
             long diff = currTime - lastCall[guildList.indexOf(guild)];
             response += String.format("`%s`\n" +
                                         "\tCalls in past hour: %d\n" +
-                                        "\tLast one was %d mins, %d secs, %d ms ago", guild.getName(), usage[guildList.indexOf(guild)], TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000);
+                                        "\tLast one was %d mins, %d secs, %d ms ago\n", guild.getName(), usage[guildList.indexOf(guild)], TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000);
         }
         largeMessageSender(response, channel);  //Send message
     }
