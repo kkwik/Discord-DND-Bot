@@ -102,7 +102,8 @@ public class Actions extends ListenerAdapter {
         {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
 
-            imageSender("PHB\\Spells\\" + imageName + ".png", "Ah... here it is:", channel);
+            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Spells" + Main.FILE_SEPARATOR + imageName + ".png", "", channel);
+            //imageSender("PHB\\Spells\\" + imageName + ".png", "Ah... here it is:", channel);
             return;
         }
         else if(matches.size() != 0)
@@ -290,9 +291,9 @@ public class Actions extends ListenerAdapter {
         final String className = parsedMessage[0];
         if(parsedMessage.length == 1)
         {   //If only the class name is used, send all images
-            imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png", "", channel);
-            imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Class.png", "", channel);
-            imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Paths.png", "", channel);
+            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
+            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
+            imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Path.png", "", channel);
             return;
             //File imageFile = new File("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png");    //Used for IDE testing
             //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar
@@ -301,11 +302,11 @@ public class Actions extends ListenerAdapter {
         {   //If a specifier is used, check against a series of possible inputs to determine what to do
             final String specifier = parsedMessage[1];
             if(("TABLESLEVELUP").contains(specifier))
-                imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png", "", channel);
+                imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
             else if(("CLASSESFEATURESFEATS").contains(specifier))
-                imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Class.png", "", channel);
+                imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
             else if(("PATHSCOLLEGESDOMAINSCIRCLESARCHETYPESWAYSTRADITIONSOATHSORIGINSPATRONSSCHOOLS").contains(specifier))
-                imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Paths.png", "", channel);
+                imageSender(Main.executionLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "Classes" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Path.png", "", channel);
             else
             {   //Specifier is not a valid input
                 channel.sendMessage("I don't get that").queue();
@@ -349,29 +350,31 @@ public class Actions extends ListenerAdapter {
     }
 
     //Admin command used to printout interesting bot usage statistics
-    private void usageCommandHandler(final String term, final MessageChannel channel)
-    {
-        String response = String.format("Total calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
-        response += String.format("Calls in last hour: %d\n", Main.usageStatQueue.size());  //Print out amount of times the bot was called in the past hour
+    private void usageCommandHandler(final String term, final MessageChannel channel) {
+        long currTime = System.currentTimeMillis();
+        String response = String.format("\nTotal calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
+        response += String.format("Calls in last hour: %d\n\n", Main.usageStatQueue.size());  //Print out amount of times the bot was called in the past hour
 
         final List<Guild> guildList = Main.bot.getGuilds();
-        final HashMap<Long, Long> guildToTally = new HashMap<>();   //This hashmap identifies the amount of times the bot has been called from each server. Server/guild id is the key and occurrence is the value.
-        for(Guild guild : guildList)
-        {   //Create an populate a hashmap that has enough entries for the amount of guilds. Auto-populate occurrence count to 0
-            guildToTally.put(guild.getIdLong(), 0L);
-        }
-
-        for(usageStat stat : Main.usageStatQueue)
-        {   //Go through the usage queue and increment the hashmap values. Notably the hashmap is made to have enough space for each guild but not private messages, so they are not tabulated or printed.
-            if (guildToTally.containsKey(stat.getGuildId()))
+        final long[] usage = new long[guildList.size()];    //Tracks how many times the bot was called from each server
+        final long[] lastCall = new long[guildList.size()]; //Tracks the last time the bot was called from each server
+        for (usageStat stat : Main.usageStatQueue) //Go through the usageStatQueue and tally how many messages came from each server
+        {
+            int pos = guildList.indexOf(Main.bot.getGuildById(stat.getGuildId()));
+            if(pos != -1)   //List.indexOf returns -1 if the object is not found in list. In this instance the message is a private message so it's guild id is not in the guildList
             {
-                guildToTally.put(stat.getGuildId(), guildToTally.get(stat.getGuildId()) + 1);
+                usage[pos]++;
+                lastCall[pos] = stat.getTime();
             }
         }
 
-        for(Guild guild : guildList)    //Print out the calls per server
-            response += String.format("%s calls in past hour: %d", guild.getName(), guildToTally.get(guild.getIdLong()));
-
+        for (Guild guild : guildList)   //Print out the calls per server
+        {
+            long diff = currTime - lastCall[guildList.indexOf(guild)];
+            response += String.format("`%s`\n" +
+                                        "\tCalls in past hour: %d\n" +
+                                        "\tLast one was %d mins, %d secs, %d ms ago", guild.getName(), usage[guildList.indexOf(guild)], TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000);
+        }
         largeMessageSender(response, channel);  //Send message
     }
 
