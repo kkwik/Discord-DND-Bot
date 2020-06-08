@@ -100,7 +100,7 @@ public class Actions extends ListenerAdapter {
         if(exactMatch != null || matches.size() == 1)
         {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName + ".png", "", channel);
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName.name() + ".png", "", channel);
             return;
         }
         else if(matches.size() != 0)
