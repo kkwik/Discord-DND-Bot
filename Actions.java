@@ -100,7 +100,7 @@ public class Actions extends ListenerAdapter {
         if(exactMatch != null || matches.size() == 1)
         {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName.name() + ".png", "", channel);
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName.name() + ".PNG", "", channel);
             return;
         }
         else if(matches.size() != 0)
@@ -131,8 +131,8 @@ public class Actions extends ListenerAdapter {
                                                                     "`Class:` options - Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard. Ex. `Class:Wizard`\n" +
                                                                     "`Level:` options - 0-9 Ex. `Level:3`\n" +
                                                                     "`School:` options - Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation Ex. `School:Illusion`\n" +
-                                                                    "Using multiple of the same type of argument [class:wizard class:bard] will retrieve spells that pertain to any of the filters.\n" +
-                                                                    "Using different types of arguments [class:wizard level:0] will retrieve spells that pertain to all of those filters.").queue();
+                                                                    "Using multiple of the same type of argument [class:wizard class:bard] will retrieve spells that pertain to any of the filters. In the example to the left, it would return all spells that are used by wizards OR bards.\n" +
+                                                                    "Using different types of arguments [class:wizard level:0] will retrieve spells that pertain to all of those filters. In the example to the left, it would return all spells that are used by wizards AND are level 0.").queue();
             return;
         }
 
@@ -268,8 +268,10 @@ public class Actions extends ListenerAdapter {
             author.openPrivateChannel().complete().sendMessage("Class Command - Returns an image of class info.\n" +
                                                                     "Format: ;spell [class name] [optional specifier]\n" +
                                                                     "Arguments: \n" +
-                                                                    "Class name is class name Ex. `Bard`\n" +
-                                                                    "Optional specifier can be `table`, `class`, `path` and will only send the relevant part of the class info. Without specifiers this command will send all three.").queue();
+                                                                    "Class name is class name Ex. `Bard. It has to be spelled correct but capitalization doesn't matter.`\n" +
+                                                                    "Class information is divided into three parts: the level up table, class features, and 'paths/archetypes/way/tradition/etc' which is the class branch options.\n" +
+                                                                    "Optional specifier can be `table`, `class`, `path` and will only send the relevant part of the class info. Without specifiers this command will send all three.\n +" +
+                                                                    "Fair Warning: Some of the images are large and will take a while to send.").queue();
             return;
         }
         final String[] parsedMessage = searchTerm.split(" ");
@@ -343,7 +345,7 @@ public class Actions extends ListenerAdapter {
                 break;
 
             case "VERSION":
-                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/cb8cb0f5d0b1fc318c2ce33c4a6ebc0e0044e8e4").queue();
+                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/55cc4a2da386f342b1305783bd7b9e2d4021df87").queue();
                 break;
 
             default:
