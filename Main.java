@@ -5,7 +5,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import javax.security.auth.login.LoginException;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 
 public class Main extends ListenerAdapter {
@@ -31,7 +31,9 @@ public class Main extends ListenerAdapter {
     protected static final String FILE_SEPARATOR = System.getProperty("file.separator");
     protected static final char trigger = ';';
 
-    protected static HashSet<Long> guildWhitelist = new HashSet<Long>();
+    protected static final ArrayDeque<usageStat> usageStatQueue = new ArrayDeque<>();
+    protected static long usageStat = 0;
+    protected static final HashSet<Long> guildWhitelist = new HashSet<Long>();
     private static void initGuildWhitelist() {
         for(long guildId : PersonalData.guilds)
             guildWhitelist.add(guildId);

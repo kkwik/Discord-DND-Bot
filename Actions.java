@@ -6,23 +6,27 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import java.io.File;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.ArrayDeque;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.HashMap;
 
 public class Actions extends ListenerAdapter {
 
     @Override   //This method is triggered everytime a message is sent in the discord server
-    public void onGuildMessageReceived(GuildMessageReceivedEvent event)
+    public void onGuildMessageReceived(final GuildMessageReceivedEvent event)
     {
         if(event.getAuthor().isBot() || !Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message sent is from a bot, then ignore it
             return;
-        long start = System.currentTimeMillis();
         topLevelHandler(new MessageEvent(event));
-        System.out.println(System.currentTimeMillis()-start);
     }
 
     @Override   //This method is triggered by private messages to the bot
-    public void onPrivateMessageReceived(PrivateMessageReceivedEvent event)
+    public void onPrivateMessageReceived(final PrivateMessageReceivedEvent event)
     {
         if(event.getAuthor().isBot())   //If the message sent is from a bot, then ignore it
             return;
@@ -30,26 +34,27 @@ public class Actions extends ListenerAdapter {
     }
 
     //This method separates the first string separated by " " and uses a switch on that term to determine what to do
-    private void topLevelHandler(MessageEvent messageEvent)
+    private void topLevelHandler(final MessageEvent messageEvent)
     {
-        String message = messageEvent.getMessage().toUpperCase();
+        final String message = messageEvent.getMessage().toUpperCase();
         if(message.length() < 2 || message.charAt(0) != ';')
-            return;
+            return; //If message doesn't begin with ; or is just one character then invalid so exit
 
-        String[] parsedMessage = separateFirstTerm(message.substring(1));
+        addAndUpdateUsageStats(messageEvent);   //Log this message activity
+        final String[] parsedMessage = separateFirstTerm(message.substring(1));
         switch(parsedMessage[0])
         {
             case "SPELL":
-                spellCommandHandler(parsedMessage[1], messageEvent.getChannel());
+                spellCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "SPELLLIST":
-                spellListCommandHandler(parsedMessage[1], messageEvent.getChannel());
+                spellListCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "CLASS":
-                classCommandHandler(parsedMessage[1], messageEvent.getChannel());
+                classCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "BOT":
-                adminCommandHandler(parsedMessage[1], messageEvent.getAuthor(), messageEvent.getChannel());
+                adminCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "HELP":
                 helpCommandHandler(parsedMessage[1], messageEvent.getAuthor());
@@ -62,15 +67,15 @@ public class Actions extends ListenerAdapter {
 
     //;spell command. Returns an image of the spell or a list of similar spells. Note: images of the PHB are not included in this repository
     //Format: ;spell [string here]. ex. ";spell fire bolt"
-    private void spellCommandHandler(String searchTerm, MessageChannel channel)
+    private void spellCommandHandler(final String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP") || searchTerm.equals("H"))
         {
-            channel.sendMessage(Character.toString((char)32)).embed(new EmbedBuilder().setDescription("Spell Command - Returns an image of the spell or a list of similar spells.\nFormat: ;spell [string here]\nEx. \";spell Aid\"").build()).queue();
+            author.openPrivateChannel().complete().sendMessage("Spell Command - Returns an image of the spell or a list of similar spells.\nFormat: ;spell [string here]\nEx. \";spell Aid\"").queue();
             return;
         }
 
-        String searchSpell = searchTerm.replaceAll("[^A-Z]",""); //searchSpell is all caps letters only
+        final String searchSpell = searchTerm.replaceAll("[^A-Z]",""); //searchSpell is all caps letters only
         if(searchSpell.length() == 0)
         {   //If the searchTerm is symbols return because it is invalid
             channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
@@ -78,11 +83,12 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Search through spells   */
-        ArrayDeque<dndSpells> matches = new ArrayDeque<>();
+        final ArrayDeque<dndSpells> matches = new ArrayDeque<>();
         dndSpells exactMatch = null;
         if(dndSpells.isValid(searchSpell))
         {//The searchSpell is the exact name of a spell
             exactMatch = dndSpells.valueOf(searchSpell);
+            System.out.println("exact");
         }
         else
         {//Iterate through all spells in dndSpells create a list of spells who contain a substring of searchSpell
@@ -94,7 +100,7 @@ public class Actions extends ListenerAdapter {
         /*  Handle results  */
         if(exactMatch != null || matches.size() == 1)
         {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
-            dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
+            final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
 
             imageSender("PHB\\Spells\\" + imageName + ".png", "Ah... here it is:", channel);
             return;
@@ -117,15 +123,22 @@ public class Actions extends ListenerAdapter {
     //;spellList command. Searches through the dndSpells enum and responds with a list of all spells matching the query
     //Format: ;spellList class:[class] level:[level] school:[school]. ex. ";spellList class:Bard level:0 school:evocation"
     //You can include multiple of a single argument (ie "class:Bard class:Wizard") and it will be treated as OR
-    private void spellListCommandHandler(String searchTerm, MessageChannel channel)
+    private void spellListCommandHandler(final String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP") || searchTerm.equals("H"))
         {
-            channel.sendMessage(Character.toString((char)32)).embed(new EmbedBuilder().setDescription("SpellList Command - Searches spells with criteria and returns a list of matching spells.\nFormat: ;spellList [series of arguments]. \nPotential arguments are Class:, Level:, and School:\nEx. \";spellList class:Bard class:Wizard level:0 school:evocation\"\nNotably using multiple arguments of the same type (class:wizard class:bard) will return a list of spells which have any of the characteristics.\nUsing different types of arguments (class:wizard level:0) will return a list of spells that fit both of those characteristics.").build()).queue();
+            author.openPrivateChannel().complete().sendMessage("SpellList Command - Searches spells with criteria and returns a list of matching spells.\n" +
+                                                                    "Format: ;spellList [series of arguments]. \n" +
+                                                                    "Possible arguments:\n" +
+                                                                    "`Class:` options - Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard. Ex. `Class:Wizard`\n" +
+                                                                    "`Level:` options - 0-9 Ex. `Level:3`\n" +
+                                                                    "`School:` options - Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation Ex. `School:Illusion`\n" +
+                                                                    "Using multiple of the same type of argument [class:wizard class:bard] will retrieve spells that pertain to any of the filters.\n" +
+                                                                    "Using different types of arguments [class:wizard level:0] will retrieve spells that pertain to all of those filters.").queue();
             return;
         }
 
-        String[] terms = searchTerm.split(" ");
+        final String[] terms = searchTerm.split(" ");
         if(terms.length == 0)
         {   //If ";spellList" is called alone
             channel.sendMessage("Please add some filters to that").queue();
@@ -133,14 +146,14 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Parse Command   */
-        ArrayList<dndClasses> classFilter = new ArrayList<>();      //Holds every class to look for
-        ArrayList<Byte> levelFilter = new ArrayList<>();            //Holds every level to look for
-        ArrayList<dndSpellSchool> schoolFilter = new ArrayList<>(); //Holds every school to look for
+        final ArrayList<dndClasses> classFilter = new ArrayList<>();      //Holds every class to look for
+        final ArrayList<Byte> levelFilter = new ArrayList<>();            //Holds every level to look for
+        final ArrayList<dndSpellSchool> schoolFilter = new ArrayList<>(); //Holds every school to look for
         for(String arg : terms)
         {//Iterate through every space separated string and parse it
             if (arg.startsWith("CLASS:") || arg.startsWith("C:"))
             {   //Parse class: argument
-                String argClass = arg.split(":")[1];
+                final String argClass = arg.split(":")[1];
                 if (dndClasses.isValid(argClass))
                 {   //Class: represents a valid class name, add it to filter list
                     classFilter.add(dndClasses.valueOf(argClass));
@@ -172,7 +185,7 @@ public class Actions extends ListenerAdapter {
             }
             else if(arg.startsWith("SCHOOL:") || arg.startsWith("S:"))
             {   //Parse level: school
-                String argSchool = arg.split(":")[1];
+                final String argSchool = arg.split(":")[1];
                 if(dndSpellSchool.isValid(argSchool))
                 {   //If school: is valid, add it to the filter
                     schoolFilter.add(dndSpellSchool.valueOf(argSchool));
@@ -191,7 +204,7 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Search through spell enum for spell that matches filters   */
-        ArrayDeque<String> spellList = new ArrayDeque<>();
+        final ArrayDeque<String> spellList = new ArrayDeque<>();
         for(dndSpells spell : EnumSet.allOf(dndSpells.class))
         {
             boolean classPass = false, levelPass = false, schoolPass = false;   //Default to fail
@@ -200,7 +213,7 @@ public class Actions extends ListenerAdapter {
                 classPass = true;   //If no class filter is specified, then set to true. We don't need to search
             else
             {   //Go through the classes 'spell' is used by, and if any class on the filter matches then set to true
-                dndClasses[] spellClasses = spell.getSpellClasses();
+                Set<dndClasses> spellClasses = spell.getSpellClasses();
                 for(dndClasses cl : spellClasses)
                 {
                     if(classFilter.contains(cl))
@@ -241,7 +254,7 @@ public class Actions extends ListenerAdapter {
         }
         else
         {   //List all the spells that matched the filters
-            String response = "Hmm... These spells match your request:\n";
+            String response = "I found these spells that matched your request:\n";
             while(spellList.size() != 0) //Go through all the spells that contained the searchTerm and print them out
                 response += spellList.removeFirst().toString() + '\n';
             largeMessageSender(response, channel);
@@ -249,29 +262,34 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    private void classCommandHandler(String searchTerm, MessageChannel channel)
+    //Used to send information about a dnd class
+    private void classCommandHandler(final String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP") || searchTerm.equals("H"))
         {
-            channel.sendMessage(Character.toString((char)32)).embed(new EmbedBuilder().setDescription("Class Command - Returns an image of class info.\nFormat: ;spell [class name]\nYou can specify table, class, path.\nEx. \";class bard\"").build()).queue();
+            author.openPrivateChannel().complete().sendMessage("Class Command - Returns an image of class info.\n" +
+                                                                    "Format: ;spell [class name] [optional specifier]\n" +
+                                                                    "Arguments: \n" +
+                                                                    "Class name is class name Ex. `Bard`\n" +
+                                                                    "Optional specifier can be `table`, `class`, `path` and will only send the relevant part of the class info. Without specifiers this command will send all three.").queue();
             return;
         }
-        String[] parsedMessage = searchTerm.split(" ");
+        final String[] parsedMessage = searchTerm.split(" ");
         if(parsedMessage.length == 0 || parsedMessage.length > 2)
-        {
+        {   //User input checking
             channel.sendMessage("Too many or too few arguments. Use 1 or 2.").queue();
             return;
         }
 
         if(!dndClasses.isValid(parsedMessage[0]))
-        {
+        {   //If the class isn't a valid class then error message and exit
             channel.sendMessage("Invalid class name").queue();
             return;
         }
 
-        String className = parsedMessage[0];
+        final String className = parsedMessage[0];
         if(parsedMessage.length == 1)
-        {
+        {   //If only the class name is used, send all images
             imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png", "", channel);
             imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Class.png", "", channel);
             imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Paths.png", "", channel);
@@ -280,8 +298,8 @@ public class Actions extends ListenerAdapter {
             //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar
         }
         else
-        {
-            String specifier = parsedMessage[1];
+        {   //If a specifier is used, check against a series of possible inputs to determine what to do
+            final String specifier = parsedMessage[1];
             if(("TABLESLEVELUP").contains(specifier))
                 imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Table.png", "", channel);
             else if(("CLASSESFEATURESFEATS").contains(specifier))
@@ -289,18 +307,21 @@ public class Actions extends ListenerAdapter {
             else if(("PATHSCOLLEGESDOMAINSCIRCLESARCHETYPESWAYSTRADITIONSOATHSORIGINSPATRONSSCHOOLS").contains(specifier))
                 imageSender("PHB\\Classes\\" + parsedMessage[0] + "\\" + "Paths.png", "", channel);
             else
-            {
+            {   //Specifier is not a valid input
                 channel.sendMessage("I don't get that").queue();
             }
         }
     }
 
-    private void adminCommandHandler(String term, User author, MessageChannel channel)
+    //Handles commands that only the admin should have access too
+    private void adminCommandHandler(final String term, final MessageChannel channel, final User author)
     {
-        if(author.getIdLong() != PersonalData.ADMIN_ID) //Only allow ADMIN to use these commands
+        if(author.getIdLong() != PersonalData.ADMIN_ID) { //Only allow ADMIN to use these commands
+            channel.sendMessage("Unrecognized command.").queue();
             return;
+        }
 
-        String[] parsedMessage = separateFirstTerm(term);
+        final String[] parsedMessage = separateFirstTerm(term);
         switch(parsedMessage[0])
         {
             case "SHUTDOWN":    //Stop execution of bot
@@ -309,13 +330,17 @@ public class Actions extends ListenerAdapter {
                 System.exit(0); //Exit execution
                 break;
 
-            case "UPTIME":
+            case "UPTIME":  //Print out uptime of the bot formatted legibly
                 long diff = System.currentTimeMillis() - Main.startEpoch;
                 channel.sendMessage("Start Time: " + new Date(Main.startEpoch) + "\nTime Elapsed: " + String.format("%d days, %d hrs, %d mins, %d secs, %d ms", TimeUnit.MILLISECONDS.toDays(diff), TimeUnit.MILLISECONDS.toHours(diff) % 24, TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000)).queue();
                 break;
 
-            case "GUILD":
+            case "GUILD":   //Get a list of guilds the bot is in
                 guildCommandHandler(parsedMessage[1], channel);
+                break;
+
+            case "USAGE":   //Get readouts of how much the bot has been used
+                usageCommandHandler(parsedMessage[1], channel);
                 break;
 
             default:
@@ -323,12 +348,56 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    private void guildCommandHandler(String term, MessageChannel channel)
+    //Admin command used to printout interesting bot usage statistics
+    private void usageCommandHandler(final String term, final MessageChannel channel)
     {
-        String[] parsedMessage = separateFirstTerm(term);
+        String response = String.format("Total calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
+        response += String.format("Calls in last hour: %d\n", Main.usageStatQueue.size());  //Print out amount of times the bot was called in the past hour
+
+        final List<Guild> guildList = Main.bot.getGuilds();
+        final HashMap<Long, Long> guildToTally = new HashMap<>();   //This hashmap identifies the amount of times the bot has been called from each server. Server/guild id is the key and occurrence is the value.
+        for(Guild guild : guildList)
+        {   //Create an populate a hashmap that has enough entries for the amount of guilds. Auto-populate occurrence count to 0
+            guildToTally.put(guild.getIdLong(), 0L);
+        }
+
+        for(usageStat stat : Main.usageStatQueue)
+        {   //Go through the usage queue and increment the hashmap values. Notably the hashmap is made to have enough space for each guild but not private messages, so they are not tabulated or printed.
+            if (guildToTally.containsKey(stat.getGuildId()))
+            {
+                guildToTally.put(stat.getGuildId(), guildToTally.get(stat.getGuildId()) + 1);
+            }
+        }
+
+        for(Guild guild : guildList)    //Print out the calls per server
+            response += String.format("%s calls in past hour: %d", guild.getName(), guildToTally.get(guild.getIdLong()));
+
+        largeMessageSender(response, channel);  //Send message
+    }
+
+    //Increments usageStat which represents total calls, adds a usageStat to the queue, and calls updateUsageStats()
+    private void addAndUpdateUsageStats(final MessageEvent messageEvent)
+    {
+        Main.usageStat++;
+        Main.usageStatQueue.addLast(new usageStat(messageEvent.getGuildId()));
+        updateUsageStats();
+    }
+
+    //Prunes usageStatQueue of all entries older than an hour
+    private void updateUsageStats()
+    {
+        final long hrPast = System.currentTimeMillis() - 3600000;
+        while(Main.usageStatQueue.getFirst().getTime() < hrPast)
+            Main.usageStatQueue.removeFirst();
+    }
+
+    //Admin command that handles guild related stuff
+    private void guildCommandHandler(final String term, final MessageChannel channel)
+    {
+        final String[] parsedMessage = separateFirstTerm(term);
         switch(parsedMessage[0])
         {
-            case "LIST":
+            case "LIST":    //Prints out a list of guilds the bot is in
                 List<Guild> guildList = Main.bot.getGuilds();
                 String message = "";
                 for(Guild serv : guildList)
@@ -338,20 +407,17 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    private void helpCommandHandler(String searchTerm, User author)
+    //Pm's user a list of commands
+    private void helpCommandHandler(final String searchTerm, final User author)
     {
-        if(searchTerm.equals("SPELL"))
-        {
-            author.openPrivateChannel().complete().sendMessage("Used to get information about a spell. You can also search for a fragment of the spell name\nSyntax: ;spell [spell name].").queue();
-        }
-        else if(searchTerm.equals("BOT"))
-        {
-            return;
-        }
+        author.openPrivateChannel().complete().sendMessage("Available commands:\n" +
+                                                                ";spell help\n" +
+                                                                ";spellList help\n" +
+                                                                ";class help").queue();
     }
 
     //Turns "spell Hello World" into {"spell", "Hello World"} or "help" into {"help", ""}
-    private String[] separateFirstTerm(String term)
+    private String[] separateFirstTerm(final String term)
     {
         if(term.contains(" ")) {
             int spaceIndex = term.indexOf(' ');
@@ -361,8 +427,9 @@ public class Actions extends ListenerAdapter {
     }
 
     //used to send text messages that might be very large. Breaks the message down into smaller chunks
-    private void largeMessageSender(String message, MessageChannel channel)
+    private void largeMessageSender(final String inputMessage, final MessageChannel channel)
     {
+        String message = inputMessage;
         while(message.length() > 1999)
         {
             int messageEndPoint = message.substring(0, 1999).lastIndexOf('\n');
@@ -373,7 +440,8 @@ public class Actions extends ListenerAdapter {
             channel.sendMessage(message).queue();
     }
 
-    private void imageSender(String path, String optionalMessage, MessageChannel channel)
+    //Generic image sender that checks for valid file and sends image to channel
+    private void imageSender(final String path, final String optionalMessage, final MessageChannel channel)
     {
         File imageFile = new File(path);    //Used for IDE testing
         //File imageFile = new File(String.format("%s%sImages%sSpells%s%s.png", Main.executionLocation, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, Main.FILE_SEPARATOR, imageName)); //Used for when in Jar. Put PHB in same dir as .jar

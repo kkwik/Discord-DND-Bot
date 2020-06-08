@@ -10,6 +10,5 @@ public enum dndClasses {
             validClasses.add(dndClass.name());
     }
 
-    protected static boolean isValid(String searchForClass){return validClasses.contains(searchForClass);}
-
+    protected static boolean isValid(final String searchForClass){return validClasses.contains(searchForClass);}
 }

@@ -10,5 +10,5 @@ public enum dndSpellSchool {
             validSchools.add(school.name());
     }
 
-    protected static boolean isValid(String searchForSchool){return validSchools.contains(searchForSchool);}
+    protected static boolean isValid(final String searchForSchool){return validSchools.contains(searchForSchool);}
 }

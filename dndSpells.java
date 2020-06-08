@@ -1,5 +1,7 @@
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Set;
 
 public enum dndSpells {
     ACIDSPLASH ("Acid Splash", (byte)0, dndSpellSchool.CONJURATION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WIZARD}),
@@ -367,7 +369,7 @@ public enum dndSpells {
     private final String spellName;
     private final byte level;
     private final dndSpellSchool school;
-    private final dndClasses[] classes;
+    private final HashSet<dndClasses> classes = new HashSet<>();
     private static final int size = dndSpells.values().length;
     private static final HashSet<String> validNames = new HashSet<String>();
     static{
@@ -376,18 +378,19 @@ public enum dndSpells {
     }
 
     //This enum contains all the spells, spellnames, level of the spell, the school of the spell, and a list of classes that can use it
-    dndSpells(String spellName, byte level, dndSpellSchool school, dndClasses[] classes) {
+    dndSpells(final String spellName, final byte level, final dndSpellSchool school, final dndClasses[] classes) {
         this.spellName = spellName;
         this.level = level;
         this.school = school;
-        this.classes = classes;
+        for(dndClasses cl : classes)
+            this.classes.add(cl);
     }
 
     @Override
     public String toString(){return spellName;}
-    protected static boolean isValid(String searchForSpell){return validNames.contains(searchForSpell);}
+    protected static boolean isValid(final String searchForSpell){return validNames.contains(searchForSpell);}
     protected byte getLevel(){return level;}
     protected dndSpellSchool getSchool(){return school;}
-    protected dndClasses[] getSpellClasses(){return classes;}
+    protected Set<dndClasses> getSpellClasses(){return Collections.unmodifiableSet(classes);}
     protected int getSize(){return size;}
 }
