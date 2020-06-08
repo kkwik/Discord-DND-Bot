@@ -56,9 +56,15 @@ public class Actions extends ListenerAdapter {
             case "BOT":
                 adminCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
+            case "INFO":
             case "HELP":
                 helpCommandHandler(parsedMessage[1], messageEvent.getAuthor());
                 break;
+            case "CHANGELOG":
+                messageEvent.getAuthor().openPrivateChannel().complete().sendMessage("Changelog:\n" +
+                        "Made ';help' marginally more helpful. It will list available commands. Relatedly, made ';[command] help' give more detailed information.\n" +
+                        "Made ';class' command. Use ';class help' to find out more. If that information is woefully inadequate let me know.\n" +
+                        "Made ';spellList' command. Use ';spellList help' to find out more. If that information is woefully inadequate let me know.").queue();
             default:
                 messageEvent.getChannel().sendMessage("Unrecognized command.").queue();
                 break;
@@ -131,8 +137,9 @@ public class Actions extends ListenerAdapter {
                                                                     "`Class:` options - Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard. Ex. `Class:Wizard`\n" +
                                                                     "`Level:` options - 0-9 Ex. `Level:3`\n" +
                                                                     "`School:` options - Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation Ex. `School:Illusion`\n" +
-                                                                    "Using multiple of the same type of argument [class:wizard class:bard] will retrieve spells that pertain to any of the filters. In the example to the left, it would return all spells that are used by wizards OR bards.\n" +
-                                                                    "Using different types of arguments [class:wizard level:0] will retrieve spells that pertain to all of those filters. In the example to the left, it would return all spells that are used by wizards AND are level 0.").queue();
+                                                                    "Using multiple of the same type of argument ['class:wizard class:bard'] will retrieve spells that pertain to any of the filters. In the example to the left, it would return all spells that are used by wizards OR bards.\n" +
+                                                                    "Using different types of arguments ['class:wizard level:0'] will retrieve spells that pertain to all of those filters. In the example to the left, it would return all spells that are used by wizards AND are level 0.\n" +
+                                                                    "Ex. `;spellList class:wizard school:evocation school:abjuration level:0 level:1` would return all spells used by wizards that are from either the evocation or abjuration schools and are level 0 or 1.").queue();
             return;
         }
 
@@ -268,9 +275,9 @@ public class Actions extends ListenerAdapter {
             author.openPrivateChannel().complete().sendMessage("Class Command - Returns an image of class info.\n" +
                                                                     "Format: ;spell [class name] [optional specifier]\n" +
                                                                     "Arguments: \n" +
-                                                                    "Class name is class name Ex. `Bard. It has to be spelled correct but capitalization doesn't matter.`\n" +
+                                                                    "Class name is class name (Bard, Cleric, etc). Spelling matters but not capitalization.\n" +
                                                                     "Class information is divided into three parts: the level up table, class features, and 'paths/archetypes/way/tradition/etc' which is the class branch options.\n" +
-                                                                    "Optional specifier can be `table`, `class`, `path` and will only send the relevant part of the class info. Without specifiers this command will send all three.\n +" +
+                                                                    "Optional specifier can be `table`, `class`, `path` and will only send the relevant part of the class info. Without specifiers this command will send all three.\n" +
                                                                     "Fair Warning: Some of the images are large and will take a while to send.").queue();
             return;
         }
@@ -345,7 +352,7 @@ public class Actions extends ListenerAdapter {
                 break;
 
             case "VERSION":
-                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/55cc4a2da386f342b1305783bd7b9e2d4021df87").queue();
+                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/3a5f5b4756c8861cbeea3726cc15926125656379").queue();
                 break;
 
             default:
@@ -360,24 +367,44 @@ public class Actions extends ListenerAdapter {
         response += String.format("Calls in last hour: %d\n\n", Main.usageStatQueue.size());  //Print out amount of times the bot was called in the past hour
 
         final List<Guild> guildList = Main.bot.getGuilds();
-        final long[] usage = new long[guildList.size()];    //Tracks how many times the bot was called from each server
-        final long[] lastCall = new long[guildList.size()]; //Tracks the last time the bot was called from each server
+        final ArrayList<Long> ids = new ArrayList<>();
+        for(int i = 0; i < guildList.size(); i++)
+            ids.add(guildList.get(i).getIdLong());
+        final ArrayList<Long> usage = new ArrayList<Long>();    //Tracks how many times the bot was called from each server
+        for(int i = 0; i < guildList.size(); i++)
+            usage.add(0L);
+        final ArrayList<Long> lastCall = new ArrayList<Long>(guildList.size()); //Tracks the last time the bot was called from each server
+        for(int i = 0; i < guildList.size(); i++)
+            lastCall.add(0L);
         for (usageStat stat : Main.usageStatQueue) //Go through the usageStatQueue and tally how many messages came from each server
         {
-            int pos = guildList.indexOf(Main.bot.getGuildById(stat.getGuildId()));
-            if(pos != -1)   //List.indexOf returns -1 if the object is not found in list. In this instance the message is a private message so it's guild id is not in the guildList
+            if(stat.isPM() && !ids.contains(stat.getId()))
             {
-                usage[pos]++;
-                lastCall[pos] = stat.getTime();
+                ids.add(stat.getId());
+                usage.add(0L);
+                lastCall.add(0L);
             }
+            int pos = ids.indexOf(stat.getId());
+            usage.set(pos, usage.get(pos)+1);
+            lastCall.set(pos, stat.getTime());
         }
 
-        for (Guild guild : guildList)   //Print out the calls per server
+        int i;
+        response += "Guilds:\n";
+        for (i = 0; i < guildList.size(); i++)   //Print out the calls per server
         {
-            long diff = currTime - lastCall[guildList.indexOf(guild)];
-            response += String.format("`%s`\n" +
+            long diff = currTime - (lastCall.get(i) == 0 ? System.currentTimeMillis() : lastCall.get(i));
+            response += String.format("\t`%s`\n" +
                                         "\tCalls in past hour: %d\n" +
-                                        "\tLast one was %d mins, %d secs, %d ms ago\n", guild.getName(), usage[guildList.indexOf(guild)], TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000);
+                                        "\tLast one was %d mins, %d secs, %d ms ago\n", Main.bot.getGuildById(ids.get(i)).getName(), usage.get(i), TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000);
+        }
+        response += "Private Messages:\n";
+        for( ; i < ids.size(); i++)
+        {
+            long diff = currTime - (lastCall.get(i) == 0 ? System.currentTimeMillis() : lastCall.get(i));
+            response += String.format("\t`%s`\n" +
+                    "\tCalls in past hour: %d\n" +
+                    "\tLast one was %d mins, %d secs, %d ms ago\n", Main.bot.retrieveUserById(ids.get(i)).complete().getAsTag(), usage.get(i), TimeUnit.MILLISECONDS.toMinutes(diff) % 60, TimeUnit.MILLISECONDS.toSeconds(diff) % 60, diff % 1000);
         }
         largeMessageSender(response, channel);  //Send message
     }
@@ -386,7 +413,8 @@ public class Actions extends ListenerAdapter {
     private void addAndUpdateUsageStats(final MessageEvent messageEvent)
     {
         Main.usageStat++;
-        Main.usageStatQueue.addLast(new usageStat(messageEvent.getGuildId()));
+        boolean pm = Main.bot.getGuildById(messageEvent.getGuildId()) == null;
+        Main.usageStatQueue.addLast(new usageStat(pm ? messageEvent.getAuthor().getIdLong(): messageEvent.getGuildId(), pm));
         updateUsageStats();
     }
 
@@ -417,10 +445,13 @@ public class Actions extends ListenerAdapter {
     //Pm's user a list of commands
     private void helpCommandHandler(final String searchTerm, final User author)
     {
-        author.openPrivateChannel().complete().sendMessage("Available commands:\n" +
-                                                                ";spell help\n" +
-                                                                ";spellList help\n" +
-                                                                ";class help").queue();
+        author.openPrivateChannel().complete().sendMessage("This is a bot for 5e dnd that hopefully speeds up some parts of online dnd.\n" +
+                "Commands:\n" +
+                ";spell help\n" +
+                ";class help\n" +
+                ";spellList help\n" +
+                ";changelog\n" +
+                "It responds to private messages as well.").queue();
     }
 
     //Turns "spell Hello World" into {"spell", "Hello World"} or "help" into {"help", ""}
