@@ -1,5 +1,6 @@
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.OnlineStatus;
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.User;
@@ -36,22 +37,22 @@ public class Actions extends ListenerAdapter {
     //This method separates the first string separated by " " and uses a switch on that term to determine what to do
     private void topLevelHandler(final MessageEvent messageEvent)
     {
-        final String message = messageEvent.getMessage().toUpperCase();
+        final String message = messageEvent.getMessage();
         if(message.length() < 2 || message.charAt(0) != ';')
             return; //If message doesn't begin with ; or is just one character then invalid so exit
 
         addAndUpdateUsageStats(messageEvent);   //Log this message activity
         final String[] parsedMessage = separateFirstTerm(message.substring(1));
-        switch(parsedMessage[0])
+        switch(parsedMessage[0].toUpperCase())
         {
             case "SPELL":
-                spellCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
+                spellCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "SPELLLIST":
-                spellListCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
+                spellListCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "CLASS":
-                classCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
+                classCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "BOT":
                 adminCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
@@ -65,6 +66,7 @@ public class Actions extends ListenerAdapter {
                         "Made ';help' marginally more helpful. It will list available commands. Relatedly, made ';[command] help' give more detailed information.\n" +
                         "Made ';class' command. Use ';class help' to find out more. If that information is woefully inadequate let me know.\n" +
                         "Made ';spellList' command. Use ';spellList help' to find out more. If that information is woefully inadequate let me know.").queue();
+                break;
             default:
                 messageEvent.getChannel().sendMessage("Unrecognized command.").queue();
                 break;
@@ -73,7 +75,7 @@ public class Actions extends ListenerAdapter {
 
     //;spell command. Returns an image of the spell or a list of similar spells. Note: images of the PHB are not included in this repository
     //Format: ;spell [string here]. ex. ";spell fire bolt"
-    private void spellCommandHandler(final String searchTerm, final MessageChannel channel, final User author)
+    private void spellCommandHandler(String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP") || searchTerm.equals("H"))
         {
@@ -104,9 +106,11 @@ public class Actions extends ListenerAdapter {
 
         /*  Handle results  */
         if(exactMatch != null || matches.size() == 1)
-        {//If and exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
+        {//If an exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
             final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName.name() + ".PNG", "", channel);
+            final String classesUsedBy = imageName.getSpellClasses().toString();
+            final String formattedClassesUsedBy = classesUsedBy.substring(1, classesUsedBy.length() - 1).toLowerCase();
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName.name() + ".PNG", String.format("Used by %s", formattedClassesUsedBy), channel);
             return;
         }
         else if(matches.size() != 0)
@@ -127,7 +131,7 @@ public class Actions extends ListenerAdapter {
     //;spellList command. Searches through the dndSpells enum and responds with a list of all spells matching the query
     //Format: ;spellList class:[class] level:[level] school:[school]. ex. ";spellList class:Bard level:0 school:evocation"
     //You can include multiple of a single argument (ie "class:Bard class:Wizard") and it will be treated as OR
-    private void spellListCommandHandler(final String searchTerm, final MessageChannel channel, final User author)
+    private void spellListCommandHandler(String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP") || searchTerm.equals("H"))
         {
@@ -146,7 +150,7 @@ public class Actions extends ListenerAdapter {
         final String[] terms = searchTerm.split(" ");
         if(terms.length == 0)
         {   //If ";spellList" is called alone
-            channel.sendMessage("Please add some filters to that").queue();
+            channel.sendMessage("Please add some filters to that or try ;spellList help").queue();
             return;
         }
 
@@ -268,7 +272,7 @@ public class Actions extends ListenerAdapter {
     }
 
     //Used to send information about a dnd class
-    private void classCommandHandler(final String searchTerm, final MessageChannel channel, final User author)
+    private void classCommandHandler(String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP") || searchTerm.equals("H"))
         {
@@ -281,6 +285,7 @@ public class Actions extends ListenerAdapter {
                                                                     "Fair Warning: Some of the images are large and will take a while to send.").queue();
             return;
         }
+
         final String[] parsedMessage = searchTerm.split(" ");
         if(parsedMessage.length == 0 || parsedMessage.length > 2)
         {   //User input checking
@@ -319,7 +324,7 @@ public class Actions extends ListenerAdapter {
     }
 
     //Handles commands that only the admin should have access too
-    private void adminCommandHandler(final String term, final MessageChannel channel, final User author)
+    private void adminCommandHandler(String term, final MessageChannel channel, final User author)
     {
         if(author.getIdLong() != PersonalData.ADMIN_ID) { //Only allow ADMIN to use these commands
             channel.sendMessage("Unrecognized command.").queue();
@@ -327,7 +332,7 @@ public class Actions extends ListenerAdapter {
         }
 
         final String[] parsedMessage = separateFirstTerm(term);
-        switch(parsedMessage[0])
+        switch(parsedMessage[0].toUpperCase())
         {
             case "SHUTDOWN":    //Stop execution of bot
                 channel.sendMessage("Shutting down...").queue();
@@ -344,15 +349,22 @@ public class Actions extends ListenerAdapter {
                 break;
 
             case "GUILD":   //Get a list of guilds the bot is in
-                guildCommandHandler(parsedMessage[1], channel);
+                guildCommandHandler(parsedMessage[1].toUpperCase(), channel);
                 break;
 
             case "USAGE":   //Get readouts of how much the bot has been used
-                usageCommandHandler(parsedMessage[1], channel);
+                usageCommandHandler(channel);
                 break;
 
             case "VERSION":
-                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/3a5f5b4756c8861cbeea3726cc15926125656379").queue();
+                channel.sendMessage("https://github.com/kkwik/Discord-DND-Bot/commit/80e48f548610eccdccaede0b59711f14a5c25e5d").queue();
+                break;
+
+            case "TEXT":
+                if(parsedMessage[1].length() != 0)
+                    Main.bot.getPresence().setActivity(Activity.listening(parsedMessage[1]));
+                else
+                    Main.bot.getPresence().setActivity(null);
                 break;
 
             default:
@@ -361,7 +373,7 @@ public class Actions extends ListenerAdapter {
     }
 
     //Admin command used to printout interesting bot usage statistics
-    private void usageCommandHandler(final String term, final MessageChannel channel) {
+    private void usageCommandHandler(final MessageChannel channel) {
         long currTime = System.currentTimeMillis();
         String response = String.format("Total calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
         response += String.format("Calls in last hour: %d\n\n", Main.usageStatQueue.size());  //Print out amount of times the bot was called in the past hour
