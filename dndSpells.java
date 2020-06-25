@@ -367,15 +367,15 @@ public enum dndSpells {
     WRATHFULSMITE ("Wrathful Smite", (byte)1, dndSpellSchool.EVOCATION, new dndClasses[]{dndClasses.PALADIN}),
     ZONEOFTRUTH ("Zone Of Truth", (byte)2, dndSpellSchool.ENCHANTMENT, new dndClasses[]{dndClasses.BARD, dndClasses.CLERIC, dndClasses.PALADIN});
 
-    private final String spellName;
-    private final byte level;
-    private final dndSpellSchool school;
-    private final HashSet<dndClasses> classes = new HashSet<>();
-    private static final int size = dndSpells.values().length;
-    private static final HashSet<String> validNames = new HashSet<String>();
+    private final String spellName;                                         //The spells fully punctuated name used for text ouput
+    private final byte level;                                               //The spells level
+    private final dndSpellSchool school;                                    //The spells school
+    private final HashSet<dndClasses> classes = new HashSet<>();            //A HashSet of the classes this spell is used by      
+    private static final int size = dndSpells.values().length;              //The amount of spells
+    private static final HashSet<String> validSpellNames = new HashSet<String>();     //A HashSet of the valid spell names. Uppercase only.
     static{
         for(dndSpells name : EnumSet.allOf(dndSpells.class))
-            validNames.add(name.name());
+            validSpellNames.add(name.name());
     }
 
     //This enum contains all the spells, spellnames, level Of the spell, the school Of the spell, and a list Of classes that can use it
@@ -383,13 +383,18 @@ public enum dndSpells {
         this.spellName = spellName;
         this.level = level;
         this.school = school;
-        for(dndClasses cl : classes)
+        for(dndClasses cl : classes)    //Transferring the array of classes passed in the constructor into a HashSet for quicker lookup time.
             this.classes.add(cl);
     }
 
-    @Override
-    public String toString(){return spellName;}
-    protected static boolean isValid(final String searchForSpell){return validNames.contains(searchForSpell);}
+    @Override   
+    public String toString(){return spellName;}                         //Overriding toString() to return the punctuated name of the spell
+    protected static boolean isValid(final String searchForSpell)       //Tests against validSpellNames HashSet and returns true if present. Throws exception if any non-uppercase characters are present
+    {
+        if(searchForSpell.replaceAll("[^A-Z]","").length() == 0)
+            throw new IllegalArgumentException();
+        return validSpellNames.contains(searchForSpell);
+    }  
     protected byte getLevel(){return level;}
     protected dndSpellSchool getSchool(){return school;}
     protected Set<dndClasses> getSpellClasses(){return Collections.unmodifiableSet(classes);}
