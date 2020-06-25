@@ -5,10 +5,10 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 
 //Class that wraps up both GuildMessageReceivedEvents and PrivateMessageReceivedEvents so they can be used in the same methods since we don't need the distinctions between the two
 public final class MessageEvent {
-    private final MessageChannel channel;
-    private final User author;
-    private final String message;
-    private long guildId = -1;
+    private final MessageChannel channel;   //The channel the message was in
+    private final User author;              //The author of the message
+    private final String message;           //The text of the message
+    private long guildId = -1;              //The guildId if applicable
 
     protected MessageEvent(final GuildMessageReceivedEvent event)
     {
