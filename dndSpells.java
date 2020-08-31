@@ -338,7 +338,7 @@ public enum dndSpells {
     THUNDEROUSSMITE ("Thunderous Smite", (byte)1, dndSpellSchool.EVOCATION, new dndClasses[]{dndClasses.PALADIN}),
     THUNDERWAVE ("Thunderwave", (byte)1, dndSpellSchool.EVOCATION, new dndClasses[]{dndClasses.BARD, dndClasses.DRUID, dndClasses.SORCERER, dndClasses.WIZARD}),
     TIMESTOP ("Time Stop", (byte)9, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WIZARD}),
-    TONGUES ("Tongues", (byte)3, dndSpellSchool.DIVINATION, new dndClasses[]{dndClasses.BARD, dndClasses.WIZARD, dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
+    TONGUES ("Tongues", (byte)3, dndSpellSchool.DIVINATION, new dndClasses[]{dndClasses.BARD, dndClasses.CLERIC, dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
     TRANSPORTVIAPLANTS ("Transport Via Plants", (byte)6, dndSpellSchool.CONJURATION, new dndClasses[]{dndClasses.DRUID}),
     TREESTRIDE ("Tree Stride", (byte)5, dndSpellSchool.CONJURATION, new dndClasses[]{dndClasses.DRUID, dndClasses.RANGER}),
     TRUEPOLYMORPH ("True Polymorph", (byte)9, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.BARD, dndClasses.WARLOCK, dndClasses.WIZARD}),

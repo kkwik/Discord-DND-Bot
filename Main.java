@@ -22,8 +22,9 @@ public class Main extends ListenerAdapter {
         startEpoch = System.currentTimeMillis();
         JDABuilder builder = JDABuilder.createDefault(PersonalData.BETA_TOKEN);   //Builds the bot builder based on your bots token. Here that token is stored in a PersonalData.java file you will have to create
         bot = builder.build().awaitReady();                                                                         //Builds bot
-        bot.getPresence().setStatus(OnlineStatus.ONLINE);                                                               //Sets bot to online status
+        bot.getPresence().setStatus(OnlineStatus.IDLE);                                                               //Sets bot to online status
         bot.addEventListener(new Actions());                                                                            //This bot uses event listeners to listen for events in discord servers. To execute custom actions on events I created my own event listener named "Actions.java"
+        bot.getPresence().setStatus(OnlineStatus.ONLINE);
     }
 
     protected static final String executionDirLocation = System.getProperty("user.dir");    //Used for locating the files to send

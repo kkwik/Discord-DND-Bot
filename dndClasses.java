@@ -17,4 +17,16 @@ public enum dndClasses {
             throw new IllegalArgumentException();
         return validClasses.contains(searchForClass);
     }
+
+    protected static dndClasses findClosestClass(final String searchClass)
+    {
+        if(searchClass.replaceAll("[^A-Z]","").length() == 0)
+            throw new IllegalArgumentException();
+
+        for(dndClasses dndClass : EnumSet.allOf(dndClasses.class))
+            if(dndClass.name().contains(searchClass))
+                return dndClass;
+
+        return null;
+    }
 }

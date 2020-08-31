@@ -17,4 +17,16 @@ public enum dndSpellSchool {
             throw new IllegalArgumentException();
         return validSchools.contains(searchForSchool);
     }
+
+    protected static dndSpellSchool findClosestSchool(final String searchSchool)
+    {
+        if(searchSchool.replaceAll("[^A-Z]","").length() == 0)
+            throw new IllegalArgumentException();
+
+        for(dndSpellSchool dndSchool : EnumSet.allOf(dndSpellSchool.class))
+            if(dndSchool.name().contains(searchSchool))
+                return dndSchool;
+
+        return null;
+    }
 }

@@ -8,7 +8,7 @@ public final class MessageEvent {
     private final MessageChannel channel;   //The channel the message was in
     private final User author;              //The author of the message
     private final String message;           //The text of the message
-    private long guildId = -1;              //The guildId if applicable
+    private long guildId = -1;              //The guildId if applicable. -1 if pm
 
     protected MessageEvent(final GuildMessageReceivedEvent event)
     {
