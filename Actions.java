@@ -38,16 +38,23 @@ public class Actions extends ListenerAdapter {
     //This method separates the first string separated by " " and uses a switch on that term to determine what to do
     private void topLevelHandler(final MessageEvent messageEvent)
     {
-        final String message = messageEvent.getMessage();
-        if(message.length() < 2 || message.charAt(0) != ';')
+        final String message = messageEvent.getMessage().toUpperCase();
+        if(message.length() < 2 || message.charAt(0) != Main.triggerCharacter)
             return; //If message doesn't begin with ; or is just one character then invalid so exit
 
         addAndUpdateUsageStats(messageEvent);   //Log this message activity
         final String[] parsedMessage = separateFirstTerm(message.substring(1));
-        switch(parsedMessage[0].toUpperCase())
+        switch(parsedMessage[0])
         {
             case "SPELL":
+            case "SPELLS":
                 spellCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
+                break;
+            case "FEAT":
+            case "FEATS":
+            case "FEATURE":
+            case "FEATURES":
+                featCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "SPELLLIST":
                 spellListCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
@@ -63,6 +70,7 @@ public class Actions extends ListenerAdapter {
                 String helpText = "This is a bot for 5e dnd that hopefully speeds up some parts of online dnd.\n" +
                         "Commands:\n" +
                         ";spell help\n" +
+                        ";feat help\n" +
                         ";class help\n" +
                         ";spellList help\n" +
                         ";changelog\n" +
@@ -139,6 +147,57 @@ public class Actions extends ListenerAdapter {
         else
         {   //No spell contained the searchSpell
             channel.sendMessage("I'm sorry, but I couldn't find that spell.").queue();
+            return;
+        }
+    }
+
+    private void featCommandHandler(String searchTerm, final MessageChannel channel, final User author)
+    {
+        if(searchTerm.equals("HELP"))
+        {
+            author.openPrivateChannel().complete().sendMessage("Feat Command - Returns an image of the feat or a list of similar feats.\nFormat: ;feat [string here]\nEx. \";feat Tough\"").queue();
+            return;
+        }
+
+        final String searchFeat = searchTerm.replaceAll("[^A-Z]",""); //searchFeat is all caps letters only
+        if(searchFeat.length() == 0)
+        {   //If the searchTerm is symbols return because it is invalid
+            channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
+            return;
+        }
+
+        /*  Search through feats   */
+        final ArrayDeque<dndFeats> matches = new ArrayDeque<>();   //This ArrayDeque stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
+        dndFeats exactMatch = null;                                //This dndFeats is null by default but is assigned a dndFeats enum if the searchTerm exactly matches a feat. Essentially if this isn't null an exact match for the search term was found.
+        if(dndFeats.isValid(searchFeat))  //Check if there is a valid feat that exactly matches the searchTerm.
+        {
+            exactMatch = dndFeats.valueOf(searchFeat);
+        }
+        else
+        {//Iterate through all feats in dndFeats and add any feat that searchTerm is a substring of
+            for(dndFeats searchAgainstFeat : EnumSet.allOf(dndFeats.class))                              //Go through the list of feats
+                if (searchAgainstFeat.name().contains(searchFeat))     //If the feat we are currently comparing against contains the term we are searching for
+                    matches.add(searchAgainstFeat);
+        }
+
+        /*  Handle results  */
+        if(exactMatch != null || matches.size() == 1)
+        {//If an exact match to searchFeat or only one feat in dndFeats contained searchFeat, then retrieve file and respond to message
+            final dndFeats imageName = (exactMatch != null ? exactMatch : matches.pop());
+            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "FEATS" + Main.FILE_SEPARATOR + imageName.name() + ".PNG", null, channel);
+            return;
+        }
+        else if(matches.size() != 0)
+        {//Multiple feats were found that contained searchFeat. ex. searchFeat = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
+            String response = "Hmm... I found a couple of feats that remind me of that one:\n";
+            while(matches.size() != 0) //Go through all the feats that contained the searchFeat and print them out
+                response += matches.removeFirst().toString() + '\n';
+            largeMessageSender(response, channel);
+            return;
+        }
+        else
+        {   //No feat contained the searchFeat
+            channel.sendMessage("I'm sorry, but I couldn't find that feat.").queue();
             return;
         }
     }

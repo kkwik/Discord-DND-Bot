@@ -20,7 +20,7 @@ public class Main extends ListenerAdapter {
         //Init done
 
         startEpoch = System.currentTimeMillis();
-        JDABuilder builder = JDABuilder.createDefault(PersonalData.BETA_TOKEN);   //Builds the bot builder based on your bots token. Here that token is stored in a PersonalData.java file you will have to create
+        JDABuilder builder = JDABuilder.createDefault(PersonalData.BOB_TOKEN);   //Builds the bot builder based on your bots token. Here that token is stored in a PersonalData.java file you will have to create
         bot = builder.build().awaitReady();                                                                         //Builds bot
         bot.getPresence().setStatus(OnlineStatus.IDLE);                                                               //Sets bot to online status
         bot.addEventListener(new Actions());                                                                            //This bot uses event listeners to listen for events in discord servers. To execute custom actions on events I created my own event listener named "Actions.java"
@@ -29,7 +29,7 @@ public class Main extends ListenerAdapter {
 
     protected static final String executionDirLocation = System.getProperty("user.dir");    //Used for locating the files to send
     protected static final String FILE_SEPARATOR = System.getProperty("file.separator");
-    protected static final char trigger = ';';
+    protected static final char triggerCharacter = ';';
 
     protected static final ArrayDeque<usageStat> usageStatQueue = new ArrayDeque<>();
     protected static long usageStat = 0;    //Stores the amount of times the bot was called
