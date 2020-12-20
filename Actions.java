@@ -8,15 +8,13 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import java.io.File;
-import java.util.EnumSet;
-import java.util.ArrayDeque;
-import java.util.Set;
-import java.util.ArrayList;
-import java.util.Date;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.List;
 
 public class Actions extends ListenerAdapter {
+    //Stores at most one query per user if the user searches for a spell/feat that had multiple possible results
+    static Hashtable<User, userQuery<?>> storedUserQueries = new Hashtable<>();
 
     @Override   //This method is triggered everytime a message is sent in the discord server
     public void onGuildMessageReceived(final GuildMessageReceivedEvent event)
@@ -38,23 +36,32 @@ public class Actions extends ListenerAdapter {
     //This method separates the first string separated by " " and uses a switch on that term to determine what to do
     private void topLevelHandler(final MessageEvent messageEvent)
     {
-        final String message = messageEvent.getMessage().toUpperCase();
+        final String message = messageEvent.getMessage();
         if(message.length() < 2 || message.charAt(0) != Main.triggerCharacter)
             return; //If message doesn't begin with ; or is just one character then invalid so exit
 
         addAndUpdateUsageStats(messageEvent);   //Log this message activity
         final String[] parsedMessage = separateFirstTerm(message.substring(1));
-        switch(parsedMessage[0])
+        switch(parsedMessage[0].toUpperCase())
         {
             case "SPELL":
             case "SPELLS":
-                spellCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
+                String returnVal = spellCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
+
+                //If an error occurred while executing that can't be attributed to user error, send report to admin
+                if(returnVal == null)
+                    return;
+                reportError(messageEvent, returnVal);
                 break;
             case "FEAT":
             case "FEATS":
             case "FEATURE":
             case "FEATURES":
-                featCommandHandler(parsedMessage[1], messageEvent.getChannel(), messageEvent.getAuthor());
+                featCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
+                break;
+            case "RE":
+
+                responseCommandHandler(messageEvent.getAuthor(), parsedMessage[1], messageEvent.getChannel());
                 break;
             case "SPELLLIST":
                 spellListCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
@@ -90,6 +97,7 @@ public class Actions extends ListenerAdapter {
                 else
                     messageEvent.getAuthor().openPrivateChannel().complete().sendMessage(changelogText).queue();
                 break;
+
             default:
                 messageEvent.getChannel().sendMessage("Unrecognized command.").queue();
                 break;
@@ -98,107 +106,160 @@ public class Actions extends ListenerAdapter {
 
     //;spell command. Returns an image of the spell or a list of similar spells. Note: images of the PHB are not included in this repository
     //Format: ;spell [string here]. ex. ";spell fire bolt"
-    private void spellCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
+    private String spellCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
     {
         if(searchTerm.equals("HELP"))
         {
             author.openPrivateChannel().complete().sendMessage("Spell Command - Returns an image of the spell or a list of similar spells.\nFormat: ;spell [string here]\nEx. \";spell Aid\"").queue();
-            return;
+            return null;
         }
 
         final String searchSpell = searchTerm.replaceAll("[^A-Z]",""); //searchSpell is all caps letters only
         if(searchSpell.length() == 0)
         {   //If the searchTerm is symbols return because it is invalid
             channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
-            return;
+            return null;
         }
 
         /*  Search through spells   */
-        final ArrayDeque<dndSpells> matches = new ArrayDeque<>();   //This ArrayDeque stores every spell that has the searchTerm as a substring. Essentially it holds a list of spells that might be the one the user is searching for
+        final ArrayList<dndSpells> matches = new ArrayList<>();   //This ArrayList stores every spell that has the searchTerm as a substring. Essentially it holds a list of spells that might be the one the user is searching for
         dndSpells exactMatch = null;                                //This dndSpells is null by default but is assigned a dndSpells enum if the searchTerm exactly matches a spell. Essentially if this isn't null an exact match for the search term was found.
+
         if(dndSpells.isValid(searchSpell))  //Check if there is a valid spell that exactly matches the searchTerm.
         {
             exactMatch = dndSpells.valueOf(searchSpell);
         }
         else
-        {//Iterate through all spells in dndSpells and add any spell that searchTerm is a substring of
+        {
+            //Iterate through all spells in dndSpells and add any spell that searchTerm is a substring of
             for(dndSpells searchAgainstSpell : EnumSet.allOf(dndSpells.class))                              //Go through the list of spells
                 if (searchAgainstSpell.name().contains(searchSpell))     //If the spell we are currently comparing against contains the term we are searching for
                     matches.add(searchAgainstSpell);
         }
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1)
-        {//If an exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
-            final dndSpells imageName = (exactMatch != null ? exactMatch : matches.pop());
-            final String classesUsedBy = imageName.getSpellClasses().toString();
-            final String formattedClassesUsedBy = classesUsedBy.substring(1, classesUsedBy.length() - 1).toLowerCase();
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "SPELLS" + Main.FILE_SEPARATOR + imageName.name() + ".PNG", String.format("Used by %s", formattedClassesUsedBy), channel);
-            return;
+        if(exactMatch != null || matches.size() == 1) //If an exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
+        {
+            final dndSpells imageName = (exactMatch != null ? exactMatch : matches.remove(0));
+            return spellResultSender(channel, imageName);
         }
-        else if(matches.size() != 0)
-        {//Multiple spells were found that contained searchSpell. ex. searchSpell = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
+        else if(matches.size() != 0) //Multiple spells were found that contained searchSpell. ex. searchSpell = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
+        {
             String response = "Hmm... I found a couple of spells that remind me of that one:\n";
+
+            Collections.sort(matches, new dndSpells.spellSorter());  //Sort the list. Enum is ordered by declaration order by default.
+            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.SPELL));
+
+            int i = 0;
             while(matches.size() != 0) //Go through all the spells that contained the searchSpell and print them out
-                response += matches.removeFirst().toString() + '\n';
+            {
+                response += String.format("%d. %s\n",i++, matches.remove(0).toString());
+            }
             largeMessageSender(response, channel);
-            return;
+            return null;
         }
-        else
-        {   //No spell contained the searchSpell
+        else //No spell contained the searchSpell
+        {
             channel.sendMessage("I'm sorry, but I couldn't find that spell.").queue();
-            return;
+            return null;
         }
     }
 
-    private void featCommandHandler(String searchTerm, final MessageChannel channel, final User author)
+    //;feat command, mechanically identical to ;spell
+    private String featCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
     {
         if(searchTerm.equals("HELP"))
         {
-            author.openPrivateChannel().complete().sendMessage("Feat Command - Returns an image of the feat or a list of similar feats.\nFormat: ;feat [string here]\nEx. \";feat Tough\"").queue();
-            return;
+            author.openPrivateChannel().complete().sendMessage("Feat Command - Returns an image of the feat or a list of similar feats.\nFormat: ;feat [string here]\nEx. \";feat Aid\"").queue();
+            return null;
         }
 
         final String searchFeat = searchTerm.replaceAll("[^A-Z]",""); //searchFeat is all caps letters only
         if(searchFeat.length() == 0)
         {   //If the searchTerm is symbols return because it is invalid
             channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
-            return;
+            return null;
         }
 
         /*  Search through feats   */
-        final ArrayDeque<dndFeats> matches = new ArrayDeque<>();   //This ArrayDeque stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
+        final ArrayList<dndFeats> matches = new ArrayList<>();   //This ArrayList stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
         dndFeats exactMatch = null;                                //This dndFeats is null by default but is assigned a dndFeats enum if the searchTerm exactly matches a feat. Essentially if this isn't null an exact match for the search term was found.
+
         if(dndFeats.isValid(searchFeat))  //Check if there is a valid feat that exactly matches the searchTerm.
         {
             exactMatch = dndFeats.valueOf(searchFeat);
         }
         else
-        {//Iterate through all feats in dndFeats and add any feat that searchTerm is a substring of
+        {
+            //Iterate through all feats in dndFeats and add any feat that searchTerm is a substring of
             for(dndFeats searchAgainstFeat : EnumSet.allOf(dndFeats.class))                              //Go through the list of feats
                 if (searchAgainstFeat.name().contains(searchFeat))     //If the feat we are currently comparing against contains the term we are searching for
                     matches.add(searchAgainstFeat);
         }
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1)
-        {//If an exact match to searchFeat or only one feat in dndFeats contained searchFeat, then retrieve file and respond to message
-            final dndFeats imageName = (exactMatch != null ? exactMatch : matches.pop());
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "FEATS" + Main.FILE_SEPARATOR + imageName.name() + ".PNG", null, channel);
-            return;
+        if(exactMatch != null || matches.size() == 1) //If an exact match to searchFeat or only one feat in dndFeats contained searchFeat, then retrieve file and respond to message
+        {
+            final dndFeats imageName = (exactMatch != null ? exactMatch : matches.remove(0));
+            return featResultSender(channel, imageName);
         }
-        else if(matches.size() != 0)
-        {//Multiple feats were found that contained searchFeat. ex. searchFeat = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
+        else if(matches.size() != 0) //Multiple feats were found that contained searchFeat. ex. searchFeat = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
+        {
             String response = "Hmm... I found a couple of feats that remind me of that one:\n";
+
+            Collections.sort(matches, new dndFeats.featSorter());  //Sort the list. Enum is ordered by declaration order by default.
+            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.FEAT));
+
+            int i = 0;
             while(matches.size() != 0) //Go through all the feats that contained the searchFeat and print them out
-                response += matches.removeFirst().toString() + '\n';
+            {
+                response += String.format("%d. %s\n",i++, matches.remove(0).toString());
+            }
             largeMessageSender(response, channel);
+            return null;
+        }
+        else //No feat contained the searchFeat
+        {
+            channel.sendMessage("I'm sorry, but I couldn't find that feat.").queue();
+            return null;
+        }
+    }
+
+    //Responds to ;re by sending the image that corresponds to the item at index 'selection' in that user's latest stored query
+    private void responseCommandHandler(final User author, String selection, final MessageChannel channel)
+    {
+        if(!storedUserQueries.containsKey(author))
+        {
+            channel.sendMessage("I don't have any stored responses for you.").queue();
             return;
         }
-        else
-        {   //No feat contained the searchFeat
-            channel.sendMessage("I'm sorry, but I couldn't find that feat.").queue();
+
+
+        int sel;
+        try{
+            sel = Integer.parseInt(selection.replaceAll("[^0-9]",""));
+        }
+        catch(Exception e)
+        {
+            channel.sendMessage("I'm not entirely sure that is a number.").queue();
             return;
+        }
+
+        if(sel < 0 || sel > storedUserQueries.get(author).getResults().size() - 1)
+        {
+            channel.sendMessage(String.format("Please enter a number between 0 and %d", storedUserQueries.get(author).getResults().size() - 1)).queue();
+            return;
+        }
+
+        if(storedUserQueries.get(author).getType() == userQuery.queryType.SPELL)
+        {
+            spellResultSender(channel, (dndSpells) storedUserQueries.get(author).getResults().get(sel));
+            storedUserQueries.remove(author);
+        }
+        else if(storedUserQueries.get(author).getType() == userQuery.queryType.FEAT)
+        {
+            featResultSender(channel, (dndFeats) storedUserQueries.get(author).getResults().get(sel));
+            storedUserQueries.remove(author);
         }
     }
 
@@ -396,20 +457,21 @@ public class Actions extends ListenerAdapter {
         final String className = parsedMessage[0];
         if(parsedMessage.length == 1)
         {   //If only the class name is used, send all images
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
-            imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Paths.png", "", channel);
+
+            imageSender(Paths.get(Main.executionDirLocation, "IMAGES", "CLASSES", className, "Table.png").toString(), "", channel);
+            imageSender(Paths.get(Main.executionDirLocation, "IMAGES", "CLASSES", className, "Class.png").toString(), "", channel);
+            imageSender(Paths.get(Main.executionDirLocation, "IMAGES", "CLASSES", className, "Paths.png").toString(), "", channel);
             return;
         }
         else
         {   //If a specifier is used, check against a series of possible inputs to determine what to do
             final String specifier = parsedMessage[1];
             if(("TABLESLEVELUP").contains(specifier))
-                imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Table.png", "", channel);
+                imageSender(Paths.get(Main.executionDirLocation, "IMAGES", "CLASSES", className, "Table.png").toString(), "", channel);
             else if(("CLASSESFEATURESFEATS").contains(specifier))
-                imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Class.png", "", channel);
+                imageSender(Paths.get(Main.executionDirLocation, "IMAGES", "CLASSES", className, "Class.png").toString(), "", channel);
             else if(("PATHSCOLLEGESDOMAINSCIRCLESARCHETYPESWAYSTRADITIONSOATHSORIGINSPATRONSSCHOOLS").contains(specifier))
-                imageSender(Main.executionDirLocation + Main.FILE_SEPARATOR + "PHB" + Main.FILE_SEPARATOR + "CLASSES" + Main.FILE_SEPARATOR + className + Main.FILE_SEPARATOR + "Paths.png", "", channel);
+                imageSender(Paths.get(Main.executionDirLocation, "IMAGES", "CLASSES", className, "Paths.png").toString(), "", channel);
             else
             {   //Specifier is not a valid input
                 channel.sendMessage("I don't get that").queue();
@@ -549,6 +611,18 @@ public class Actions extends ListenerAdapter {
         }
     }
 
+    //Report errors to administrator
+    private void reportError(final MessageEvent messageEvent, final String errorMsg)
+    {
+
+        String errorReport = String.format("Error Report: \n" +
+                                            "UserName: %25s | UserID: %25d\n" +
+                                            "Message Text: ```%s```\n" +
+                                            "Error Message: ```%s```", messageEvent.getAuthor().getName(), messageEvent.getAuthor().getIdLong(), messageEvent.getMessage(), errorMsg);
+        Main.bot.getUserById(PersonalData.ADMIN_ID).openPrivateChannel().complete().sendMessage(errorReport).queue();
+    }
+
+
     //Turns "spell Hello World" into {"spell", "Hello World"} or "help" into {"help", ""}
     private String[] separateFirstTerm(final String term)
     {
@@ -573,14 +647,45 @@ public class Actions extends ListenerAdapter {
             channel.sendMessage(message).queue();
     }
 
+    private String spellResultSender(final MessageChannel channel, dndSpells spell)
+    {
+        final String classesUsedBy = spell.getSpellClasses().toString();
+        final String formattedClassesUsedBy = classesUsedBy.substring(1, classesUsedBy.length() - 1).toLowerCase();
+        String returnVal = imageSender(Paths.get(Main.executionDirLocation,"IMAGES", "SPELLS", spell.name() + ".PNG").toString(), String.format("Used by %s", formattedClassesUsedBy), channel);
+
+        if(returnVal == null)
+            return null;
+        else    //Error occured, append
+        {
+            return returnVal.concat(String.format("\nExpected file path: %s", Paths.get(Main.executionDirLocation,"IMAGES", "SPELLS", spell.name() + ".PNG").toString()));
+        }
+    }
+
+    private String featResultSender(final MessageChannel channel, dndFeats feat)
+    {
+        String returnVal = imageSender(Paths.get(Main.executionDirLocation,"IMAGES", "FEATS", feat.name() + ".PNG").toString(), null, channel);
+
+        if(returnVal == null)
+            return null;
+        else    //Error occured, append
+        {
+            return returnVal.concat(String.format("\nExpected file path: %s", Paths.get(Main.executionDirLocation,"IMAGES", "FEATS", feat.name() + ".PNG").toString()));
+        }
+    }
+
     //Generic image sender that checks for valid file and sends image to channel
-    private void imageSender(final String path, final String optionalMessage, final MessageChannel channel)
+    private String imageSender(final String path, final String optionalMessage, final MessageChannel channel)
     {
         File imageFile = new File(path);    //Used for IDE testing
-        if(imageFile.exists())
+        if(imageFile.exists()) {
             channel.sendFile(imageFile, "image.png").embed(new EmbedBuilder().setImage("attachment://image.png").setDescription(optionalMessage).build()).queue();
-        else
+        }
+        else {
             channel.sendMessage("Curious... I know of that file but cannot find it in my library!\naka File not Found").queue();
+            return "File not found.";
+        }
+
+        return null;
     }
 
 }
