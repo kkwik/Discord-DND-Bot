@@ -1,7 +1,4 @@
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 //Enum that determines what a valid spell is. Each field contains a properly formatted string name, it's level, school, and an array Of what classes can use the spell
 public enum dndSpells {
@@ -470,7 +467,7 @@ public enum dndSpells {
     private final String spellName;                                         //The spells fully punctuated name used for text ouput
     private final byte level;                                               //The spells level
     private final dndSpellSchool school;                                    //The spells school
-    private final HashSet<dndClasses> classes = new HashSet<>();            //A HashSet of the classes this spell is used by      
+    private final HashSet<dndClasses> classes = new HashSet<>();            //A HashSet of the classes this spell is used by
     private static final int size = dndSpells.values().length;              //The amount of spells
     private static final HashSet<String> validSpellNames = new HashSet<String>();     //A HashSet of the valid spell names. Uppercase only.
     static{
@@ -489,12 +486,24 @@ public enum dndSpells {
 
     @Override   
     public String toString(){return spellName;}                         //Overriding toString() to return the punctuated name of the spell
+
+    static class spellSorter implements Comparator<dndSpells>
+    {
+        @Override
+        public int compare(dndSpells a, dndSpells b)
+        {
+            return a.toString().compareTo(b.toString());
+        }
+    }
+
     protected static boolean isValid(final String searchForSpell)       //Tests against validSpellNames HashSet and returns true if present. Throws exception if any non-uppercase characters are present
     {
         if(searchForSpell.replaceAll("[^A-Z]","").length() == 0)
             throw new IllegalArgumentException();
         return validSpellNames.contains(searchForSpell);
-    }  
+    }
+
+
     protected byte getLevel(){return level;}
     protected dndSpellSchool getSchool(){return school;}
     protected Set<dndClasses> getSpellClasses(){return Collections.unmodifiableSet(classes);}
