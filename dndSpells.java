@@ -460,9 +460,30 @@ public enum dndSpells {
     WHIRLWIND ("Whirlwind", (byte)7, dndSpellSchool.EVOCATION, new dndClasses[]{dndClasses.DRUID, dndClasses.WIZARD, dndClasses.SORCERER}),
     WORDOFRADIANCE ("Word of Radiance", (byte)0, dndSpellSchool.EVOCATION, new dndClasses[]{dndClasses.CLERIC}),
     WRATHOFNATURE ("Wrath of Nature", (byte)5, dndSpellSchool.EVOCATION, new dndClasses[]{dndClasses.DRUID, dndClasses.RANGER}),
-    ZEPHYRSTRIKE ("Zephyr Strike", (byte)1, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.RANGER})
+    ZEPHYRSTRIKE ("Zephyr Strike", (byte)1, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.RANGER}),
 
-    ;
+    //Tasha's
+    BLADEOFDISASTER ("Blade of Disaster", (byte)9, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    BOOMINGBLADE ("Booming Blade", (byte)0, dndSpellSchool.EVOCATION, new dndClasses[]{}),
+    DREAMOFTHEBLUEVEIL ("Dream of the Blue Veil", (byte)7, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    GREENFLAMEBLADE ("Green-Flame Blade", (byte)0, dndSpellSchool.EVOCATION, new dndClasses[]{}),
+    INTELLECTFORTRESS ("Intellect Fortress", (byte)3, dndSpellSchool.ABJURATION, new dndClasses[]{}),
+    LIGHTNINGLURE ("Lightning Lure", (byte)0, dndSpellSchool.EVOCATION, new dndClasses[]{}),
+    MINDSLIVER ("Mind Sliver", (byte)0, dndSpellSchool.ENCHANTMENT, new dndClasses[]{}),
+    SPIRITSHROUD ("Spirit Shroud", (byte)3, dndSpellSchool.NECROMANCY, new dndClasses[]{}),
+    SUMMONABERRATION ("Summon Aberration", (byte)4, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONBEAST ("Summon Beast", (byte)2, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONCELESTIAL ("Summon Celestial", (byte)5, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONCONSTRUCT ("Summon Construct", (byte)4, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONELEMENTAL ("Summon Elemental", (byte)4, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONFEY ("Summon Fey", (byte)3, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONFIEND ("Summon Fiend", (byte)6, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONSHADOWSPAWN ("Summon Shadowspawn", (byte)3, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    SUMMONUNDEAD ("Summon Undead", (byte)3, dndSpellSchool.NECROMANCY, new dndClasses[]{}),
+    SWORDBURST ("Sword Burst", (byte)0, dndSpellSchool.CONJURATION, new dndClasses[]{}),
+    TASHASCAUSTICBREW ("Tasha's Caustic Brew", (byte)1, dndSpellSchool.EVOCATION, new dndClasses[]{}),
+    TASHASMINDWHIP ("Tasha's Mind Whip", (byte)2, dndSpellSchool.ENCHANTMENT, new dndClasses[]{}),
+    TASHASOTHERWORLDLYGUISE ("Tasha's Otherworldly Guise", (byte)6, dndSpellSchool.TRANSMUTATION, new dndClasses[]{});
 
     private final String spellName;                                         //The spells fully punctuated name used for text ouput
     private final byte level;                                               //The spells level

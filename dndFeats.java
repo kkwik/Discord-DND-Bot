@@ -64,7 +64,24 @@ public enum dndFeats {
     PRODIGY ("Prodigy"),
     SECONDCHANCE ("Second Chance"),
     SQUATNIMBLENESS ("Squat Nimbleness"),
-    WOODELFMAGIC ("Wood Elf Magic");
+    WOODELFMAGIC ("Wood Elf Magic"),
+
+    //Tasha
+    ARTIFICERINITIATE ("Artificer Initiate"),
+    CHEF ("Chef"),
+    CRUSHER ("Crusher"),
+    ELDRITCHADEPT ("Eldritch Adept"),
+    FEYTOUCHED ("Fey Touched"),
+    FIGHTINGINITIATE ("Fighting Initiate"),
+    GUNNER ("Gunner"),
+    METAMAGICADEPT ("Metamagic Adept"),
+    PIERCER ("Piercer"),
+    POISONER ("Poisoner"),
+    SHADOWTOUCHED ("Shadow Touched"),
+    SKILLEXPERT ("Skill Expert"),
+    SLASHER ("Slasher"),
+    TELEKINETIC ("Telekinetic"),
+    TELEPATHIC ("Telepathic");
 
     private final String featName;                                         //The feats fully punctuated name used for text output
     private static final int size = dndFeats.values().length;              //The amount of feats
