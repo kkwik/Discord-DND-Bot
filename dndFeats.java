@@ -4,6 +4,7 @@ import java.util.HashSet;
 
 //Enum that determines what a valid feat is. Each field contains a properly formatted string name
 public enum dndFeats {
+    //PHB feats
     ACTOR ("Actor"),
     ALERT ("Alert"),
     ATHLETE ("Athlete"),
@@ -45,7 +46,24 @@ public enum dndFeats {
     TAVERNBRAWLER ("Tavern Brawler"),
     TOUGH ("Tough"),
     WARCASTER ("War Caster"),
-    WEAPONMASTER ("Weapon Master");
+    WEAPONMASTER ("Weapon Master"),
+
+    //Xanathar's Guide to Everything feats
+    BOUNTIFULLUCK ("Bountiful Luck"),
+    DRAGONFEAR ("Dragon Fear"),
+    DRAGONHIDE ("Dragon Hide"),
+    DROWHIGHMAGIC ("Drow High Magic"),
+    DWARVENFORTITUDE ("Dwarven Fortitude"),
+    ELVENACCURACY ("Elven Accuracy"),
+    FADEAWAY ("Fade Away"),
+    FEYTELEPORTATION ("Fey Teleportation"),
+    FLAMESOFPHLEGETHOS ("Flames of Phlegethos"),
+    INFERNALCONSTITUTION ("Infernal Constitution"),
+    ORCISHFURY ("Orcish Fury"),
+    PRODIGY ("Prodigy"),
+    SECONDCHANCE ("Second Chance"),
+    SQUATNIMBLENESS ("Squat Nimbleness"),
+    WOODELFMAGIC ("Wood Elf Magic");
 
     private final String featName;                                         //The feats fully punctuated name used for text output
     private static final int size = dndFeats.values().length;              //The amount of feats
