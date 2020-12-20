@@ -1,3 +1,4 @@
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 
@@ -80,6 +81,16 @@ public enum dndFeats {
 
     @Override
     public String toString(){return featName;}                         //Overriding toString() to return the punctuated name of the feat
+
+    static class featSorter implements Comparator<dndFeats>
+    {
+        @Override
+        public int compare(dndFeats a, dndFeats b)
+        {
+            return a.toString().compareTo(b.toString());
+        }
+    }
+
     protected static boolean isValid(final String searchForFeat)       //Tests against validFeatNames HashSet and returns true if present. Throws exception if any non-uppercase characters are present
     {
         if(searchForFeat.replaceAll("[^A-Z]","").length() == 0)
