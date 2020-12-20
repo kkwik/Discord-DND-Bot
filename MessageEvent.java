@@ -8,7 +8,8 @@ public final class MessageEvent {
     private final MessageChannel channel;   //The channel the message was in
     private final User author;              //The author of the message
     private final String message;           //The text of the message
-    private long guildId = -1;              //The guildId if applicable. -1 if pm
+    private final long guildId;              //The guildId if applicable. -1 if pm
+    private final eventType type;
 
     protected MessageEvent(final GuildMessageReceivedEvent event)
     {
@@ -16,6 +17,7 @@ public final class MessageEvent {
         author = event.getAuthor();
         message = event.getMessage().getContentRaw();
         guildId = event.getGuild().getIdLong();
+        type = eventType.GUILD;
     }
 
     protected MessageEvent(final PrivateMessageReceivedEvent event)
@@ -23,10 +25,17 @@ public final class MessageEvent {
         channel = event.getChannel();
         author = event.getAuthor();
         message = event.getMessage().getContentRaw();
+        guildId = -1;
+        type = eventType.PRIVATE;
     }
 
     protected final MessageChannel getChannel(){return channel;}
     protected final User getAuthor(){return author;}
     protected final String getMessage(){return message;}
     protected final long getGuildId(){return guildId;}
+    protected final eventType getType(){return type;}
+
+    protected enum eventType{
+        GUILD, PRIVATE
+    }
 }
