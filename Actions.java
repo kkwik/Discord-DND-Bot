@@ -59,6 +59,12 @@ public class Actions extends ListenerAdapter {
             case "FEATURES":
                 featCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
+            case "COND":
+            case "CONDS":
+            case "CONDITION":
+            case "CONDITIONS":
+                condCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
+                break;
             case "RE":
 
                 responseCommandHandler(messageEvent.getAuthor(), parsedMessage[1], messageEvent.getChannel());
@@ -82,7 +88,7 @@ public class Actions extends ListenerAdapter {
                         ";spellList help\n" +
                         ";changelog\n" +
                         "It responds to private messages as well.";
-                if(messageEvent.getGuildId() != -1 && !parsedMessage[1].equals("-pm"))
+                if(messageEvent.getType() == MessageEvent.eventType.GUILD && !parsedMessage[1].equals("-pm"))
                     messageEvent.getChannel().sendMessage(helpText).queue();
                 else
                     messageEvent.getAuthor().openPrivateChannel().complete().sendMessage(helpText).queue();
@@ -92,7 +98,7 @@ public class Actions extends ListenerAdapter {
                         "Made ;spellList more flexible to formatting\n" +
                         "`;spellList c:wiz lvl:cantrip sch:evoc` is now valid for instance.\n" +
                         "You can now use partial names for `class:` `school:` `level:` as well as the actual class and school of the spell. `level:cantrip` is now accepted for `level:0`";
-                if(messageEvent.getGuildId() != -1 && !parsedMessage[1].equals("-pm"))
+                if(messageEvent.getType() == MessageEvent.eventType.GUILD && !parsedMessage[1].equals("-pm"))
                     messageEvent.getChannel().sendMessage(changelogText).queue();
                 else
                     messageEvent.getAuthor().openPrivateChannel().complete().sendMessage(changelogText).queue();
@@ -221,6 +227,65 @@ public class Actions extends ListenerAdapter {
         else //No feat contained the searchFeat
         {
             channel.sendMessage("I'm sorry, but I couldn't find that feat.").queue();
+            return null;
+        }
+    }
+
+    private String condCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
+    {
+        if(searchTerm.equals("HELP"))
+        {
+            author.openPrivateChannel().complete().sendMessage("Cond Command - Returns an image of the cond or a list of similar conds.\nFormat: ;cond [string here]\nEx. \";cond Aid\"").queue();
+            return null;
+        }
+
+        final String searchCond = searchTerm.replaceAll("[^A-Z]",""); //searchCond is all caps letters only
+        if(searchCond.length() == 0)
+        {   //If the searchTerm is symbols return because it is invalid
+            channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
+            return null;
+        }
+
+        /*  Search through conds   */
+        final ArrayList<dndConditions> matches = new ArrayList<>();   //This ArrayList stores every cond that has the searchTerm as a substring. Essentially it holds a list of conds that might be the one the user is searching for
+        dndConditions exactMatch = null;                                //This dndConditions is null by default but is assigned a dndConditions enum if the searchTerm exactly matches a cond. Essentially if this isn't null an exact match for the search term was found.
+
+        if(dndConditions.isValid(searchCond))  //Check if there is a valid cond that exactly matches the searchTerm.
+        {
+            exactMatch = dndConditions.valueOf(searchCond);
+        }
+        else
+        {
+            //Iterate through all conds in dndConditions and add any cond that searchTerm is a substring of
+            for(dndConditions searchAgainstCond : EnumSet.allOf(dndConditions.class))                              //Go through the list of conds
+                if (searchAgainstCond.name().contains(searchCond))     //If the cond we are currently comparing against contains the term we are searching for
+                    matches.add(searchAgainstCond);
+        }
+
+        /*  Handle results  */
+        if(exactMatch != null || matches.size() == 1) //If an exact match to searchCond or only one cond in dndConditions contained searchCond, then retrieve file and respond to message
+        {
+            final dndConditions imageName = (exactMatch != null ? exactMatch : matches.remove(0));
+            return condResultSender(channel, imageName);
+        }
+        else if(matches.size() != 0) //Multiple conds were found that contained searchCond. ex. searchCond = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
+        {
+            String response = "Hmm... I found a couple of conds that remind me of that one:\n";
+
+            Collections.sort(matches, new dndConditions.condSorter());  //Sort the list. Enum is ordered by declaration order by default.
+            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.FEAT));
+
+            int i = 0;
+            while(matches.size() != 0) //Go through all the conds that contained the searchCond and print them out
+            {
+                response += String.format("%d. %s\n",i++, matches.remove(0).toString());
+            }
+            largeMessageSender(response, channel);
+            return null;
+        }
+        else //No cond contained the searchCond
+        {
+            channel.sendMessage("I'm sorry, but I couldn't find that cond.").queue();
             return null;
         }
     }
@@ -582,7 +647,7 @@ public class Actions extends ListenerAdapter {
     private void addAndUpdateUsageStats(final MessageEvent messageEvent)
     {
         Main.usageStat++;
-        boolean pm = Main.bot.getGuildById(messageEvent.getGuildId()) == null;
+        boolean pm = messageEvent.getType() == MessageEvent.eventType.PRIVATE;
         Main.usageStatQueue.addLast(new usageStat(pm ? messageEvent.getAuthor().getIdLong(): messageEvent.getGuildId(), pm));
         updateUsageStats();
     }
@@ -670,6 +735,18 @@ public class Actions extends ListenerAdapter {
         else    //Error occured, append
         {
             return returnVal.concat(String.format("\nExpected file path: %s", Paths.get(Main.executionDirLocation,"IMAGES", "FEATS", feat.name() + ".PNG").toString()));
+        }
+    }
+
+    private String condResultSender(final MessageChannel channel, dndConditions cond)
+    {
+        String returnVal = imageSender(Paths.get(Main.executionDirLocation,"IMAGES", "CONDS", cond.name() + ".PNG").toString(), null, channel);
+
+        if(returnVal == null)
+            return null;
+        else    //Error occured, append
+        {
+            return returnVal.concat(String.format("\nExpected file path: %s", Paths.get(Main.executionDirLocation,"IMAGES", "CONDS", cond.name() + ".PNG").toString()));
         }
     }
 
