@@ -3,7 +3,7 @@ import java.util.HashSet;
 
 //Enum that determines what a valid class is
 public enum dndClasses {
-    BARBARIAN, BARD, CLERIC, DRUID, FIGHTER, MONK, PALADIN, RANGER, ROGUE, SORCERER, WARLOCK, WIZARD;   //All valid classes
+    ARTIFICER, BARBARIAN, BARD, CLERIC, DRUID, FIGHTER, MONK, PALADIN, RANGER, ROGUE, SORCERER, WARLOCK, WIZARD;   //All valid classes
 
     private static final HashSet<String> validClasses = new HashSet<String>();  //HashSet of all valid class names
     static{
