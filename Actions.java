@@ -319,12 +319,10 @@ public class Actions extends ListenerAdapter {
         if(storedUserQueries.get(author).getType() == userQuery.queryType.SPELL)
         {
             spellResultSender(channel, (dndSpells) storedUserQueries.get(author).getResults().get(sel));
-            storedUserQueries.remove(author);
         }
         else if(storedUserQueries.get(author).getType() == userQuery.queryType.FEAT)
         {
             featResultSender(channel, (dndFeats) storedUserQueries.get(author).getResults().get(sel));
-            storedUserQueries.remove(author);
         }
     }
 
