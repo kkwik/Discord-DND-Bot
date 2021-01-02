@@ -426,7 +426,7 @@ public enum dndSpells {
     POWERWORDPAIN ("Power Word Pain", (byte)7, dndSpellSchool.ENCHANTMENT, new dndClasses[]{dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
     PRIMALSAVAGERY ("Primal Savagery", (byte)0, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.DRUID}),
     PRIMORDIALWARD ("Primordial Ward", (byte)6, dndSpellSchool.ABJURATION, new dndClasses[]{dndClasses.DRUID}),
-    PYCHICSCREAM ("Psychic Scream", (byte)9, dndSpellSchool.ENCHANTMENT, new dndClasses[]{dndClasses.BARD, dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
+    PSYCHICSCREAM ("Psychic Scream", (byte)9, dndSpellSchool.ENCHANTMENT, new dndClasses[]{dndClasses.BARD, dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
     PYROTECHNICS ("Pyrotechnics", (byte)2, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.BARD, dndClasses.SORCERER, dndClasses.WIZARD}),
     SCATTER ("Scatter", (byte)6, dndSpellSchool.CONJURATION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
     SHADOWBLADE ("Shadow Blade", (byte)2, dndSpellSchool.ILLUSION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD}),
@@ -490,10 +490,10 @@ public enum dndSpells {
     private final dndSpellSchool school;                                    //The spells school
     private final HashSet<dndClasses> classes = new HashSet<>();            //A HashSet of the classes this spell is used by
     private static final int size = dndSpells.values().length;              //The amount of spells
-    private static final HashSet<String> validSpellNames = new HashSet<String>();     //A HashSet of the valid spell names. Uppercase only.
+    private static final HashSet<String> validFormattedNames = new HashSet<String>();     //A HashSet of the valid spell names. Uppercase only.
     static{
         for(dndSpells name : EnumSet.allOf(dndSpells.class))
-            validSpellNames.add(name.name());
+            validFormattedNames.add(name.name());
     }
 
     //This enum contains all the spells, spellnames, level Of the spell, the school Of the spell, and a list Of classes that can use it
@@ -521,7 +521,7 @@ public enum dndSpells {
     {
         if(searchForSpell.replaceAll("[^A-Z]","").length() == 0)
             throw new IllegalArgumentException();
-        return validSpellNames.contains(searchForSpell);
+        return validFormattedNames.contains(searchForSpell);
     }
 
 
