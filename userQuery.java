@@ -5,10 +5,10 @@ import java.util.ArrayList;
 public class userQuery<E> {
     private final User author;                  //The user who created this query. Each user can have at most one userquery
     private final ArrayList<E> queryResults;    //The list of results from the query
-    private final queryType type;               //The type of query it was. Currently supports only feats and spells
+    private final Class<E> type;               //The type of query it was. Currently supports only feats and spells
 
     
-    protected userQuery(final User author, final ArrayList<E> queryResults, final queryType type)
+    protected userQuery(final User author, final ArrayList<E> queryResults, final Class<E> type)
     {
         this.author = author;
         this.queryResults = queryResults;
@@ -25,13 +25,8 @@ public class userQuery<E> {
         return queryResults;
     }
 
-    protected queryType getType()
+    protected Class<E> getType()
     {
         return type;
     }
-
-    protected enum queryType{
-        SPELL, FEAT;
-    }
-
 }

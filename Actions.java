@@ -66,7 +66,6 @@ public class Actions extends ListenerAdapter {
                 condCommandHandler(parsedMessage[1].toUpperCase(), messageEvent.getChannel(), messageEvent.getAuthor());
                 break;
             case "RE":
-
                 responseCommandHandler(messageEvent.getAuthor(), parsedMessage[1], messageEvent.getChannel());
                 break;
             case "SPELLLIST":
@@ -112,6 +111,7 @@ public class Actions extends ListenerAdapter {
 
     //;spell command. Returns an image of the spell or a list of similar spells. Note: images of the PHB are not included in this repository
     //Format: ;spell [string here]. ex. ";spell fire bolt"
+    //Returns null if nothing of note happened. Returns a String error message if something went wrong.
     private String spellCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
     {
         if(searchTerm.equals("HELP"))
@@ -120,41 +120,28 @@ public class Actions extends ListenerAdapter {
             return null;
         }
 
-        final String searchSpell = searchTerm.replaceAll("[^A-Z]",""); //searchSpell is all caps letters only
-        if(searchSpell.length() == 0)
-        {   //If the searchTerm is symbols return because it is invalid
+        /* Normalize searchTerm */
+        final String searchSpell = searchTerm.replaceAll("[^A-Z]",""); //Make sure searchSpell is all caps only
+        if(searchSpell.length() == 0)   //If the searchTerm is only symbols return because it is invalid
+        {
             channel.sendMessage("I'm sorry but I'm not a symbologist. How about adding some letters in there?").queue();
             return null;
         }
 
         /*  Search through spells   */
-        final ArrayList<dndSpells> matches = new ArrayList<>();   //This ArrayList stores every spell that has the searchTerm as a substring. Essentially it holds a list of spells that might be the one the user is searching for
-        dndSpells exactMatch = null;                                //This dndSpells is null by default but is assigned a dndSpells enum if the searchTerm exactly matches a spell. Essentially if this isn't null an exact match for the search term was found.
-
-        if(dndSpells.isValid(searchSpell))  //Check if there is a valid spell that exactly matches the searchTerm.
-        {
-            exactMatch = dndSpells.valueOf(searchSpell);
-        }
-        else
-        {
-            //Iterate through all spells in dndSpells and add any spell that searchTerm is a substring of
-            for(dndSpells searchAgainstSpell : EnumSet.allOf(dndSpells.class))                              //Go through the list of spells
-                if (searchAgainstSpell.name().contains(searchSpell))     //If the spell we are currently comparing against contains the term we are searching for
-                    matches.add(searchAgainstSpell);
-        }
+        final ArrayList<dndSpells> matches = enumSearch(dndSpells.class, searchSpell);   //This ArrayList stores every spell that has the searchTerm as a substring. Essentially it holds a list of spells that might be the one the user is searching for
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1) //If an exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
+        if(matches.size() == 1) //If only one spell matched, send that file
         {
-            final dndSpells imageName = (exactMatch != null ? exactMatch : matches.remove(0));
-            return spellResultSender(channel, imageName);
+            return spellResultSender(channel, matches.remove(0));
         }
         else if(matches.size() != 0) //Multiple spells were found that contained searchSpell. ex. searchSpell = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
         {
             String response = "Hmm... I found a couple of spells that remind me of that one:\n";
 
-            Collections.sort(matches, new dndSpells.spellSorter());  //Sort the list. Enum is ordered by declaration order by default.
-            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.SPELL));
+            Collections.sort(matches, new dndSpells.spellSorter());  //Sort the list. Enum is ordered by declaration order by default, instead make it alphabetically.
+            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), dndSpells.class));    //Update the message authors stored queries
 
             int i = 0;
             while(matches.size() != 0) //Go through all the spells that contained the searchSpell and print them out
@@ -188,33 +175,19 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Search through feats   */
-        final ArrayList<dndFeats> matches = new ArrayList<>();   //This ArrayList stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
-        dndFeats exactMatch = null;                                //This dndFeats is null by default but is assigned a dndFeats enum if the searchTerm exactly matches a feat. Essentially if this isn't null an exact match for the search term was found.
-
-        if(dndFeats.isValid(searchFeat))  //Check if there is a valid feat that exactly matches the searchTerm.
-        {
-            exactMatch = dndFeats.valueOf(searchFeat);
-        }
-        else
-        {
-            //Iterate through all feats in dndFeats and add any feat that searchTerm is a substring of
-            for(dndFeats searchAgainstFeat : EnumSet.allOf(dndFeats.class))                              //Go through the list of feats
-                if (searchAgainstFeat.name().contains(searchFeat))     //If the feat we are currently comparing against contains the term we are searching for
-                    matches.add(searchAgainstFeat);
-        }
+        final ArrayList<dndFeats> matches = enumSearch(dndFeats.class, searchFeat);   //This ArrayList stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1) //If an exact match to searchFeat or only one feat in dndFeats contained searchFeat, then retrieve file and respond to message
+        if(matches.size() == 1) //If an exact match to searchFeat or only one feat in dndFeats contained searchFeat, then retrieve file and respond to message
         {
-            final dndFeats imageName = (exactMatch != null ? exactMatch : matches.remove(0));
-            return featResultSender(channel, imageName);
+            return featResultSender(channel, matches.remove(0));
         }
         else if(matches.size() != 0) //Multiple feats were found that contained searchFeat. ex. searchFeat = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
         {
             String response = "Hmm... I found a couple of feats that remind me of that one:\n";
 
             Collections.sort(matches, new dndFeats.featSorter());  //Sort the list. Enum is ordered by declaration order by default.
-            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.FEAT));
+            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), dndFeats.class));
 
             int i = 0;
             while(matches.size() != 0) //Go through all the feats that contained the searchFeat and print them out
@@ -247,33 +220,20 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Search through conds   */
-        final ArrayList<dndConditions> matches = new ArrayList<>();   //This ArrayList stores every cond that has the searchTerm as a substring. Essentially it holds a list of conds that might be the one the user is searching for
-        dndConditions exactMatch = null;                                //This dndConditions is null by default but is assigned a dndConditions enum if the searchTerm exactly matches a cond. Essentially if this isn't null an exact match for the search term was found.
+        final ArrayList<dndConditions> matches = enumSearch(dndConditions.class, searchCond);   //This ArrayList stores every cond that has the searchTerm as a substring. Essentially it holds a list of conds that might be the one the user is searching for
 
-        if(dndConditions.isValid(searchCond))  //Check if there is a valid cond that exactly matches the searchTerm.
-        {
-            exactMatch = dndConditions.valueOf(searchCond);
-        }
-        else
-        {
-            //Iterate through all conds in dndConditions and add any cond that searchTerm is a substring of
-            for(dndConditions searchAgainstCond : EnumSet.allOf(dndConditions.class))                              //Go through the list of conds
-                if (searchAgainstCond.name().contains(searchCond))     //If the cond we are currently comparing against contains the term we are searching for
-                    matches.add(searchAgainstCond);
-        }
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1) //If an exact match to searchCond or only one cond in dndConditions contained searchCond, then retrieve file and respond to message
+        if(matches.size() == 1) //If an exact match to searchCond or only one cond in dndConditions contained searchCond, then retrieve file and respond to message
         {
-            final dndConditions imageName = (exactMatch != null ? exactMatch : matches.remove(0));
-            return condResultSender(channel, imageName);
+            return condResultSender(channel, matches.remove(0));
         }
         else if(matches.size() != 0) //Multiple conds were found that contained searchCond. ex. searchCond = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
         {
             String response = "Hmm... I found a couple of conds that remind me of that one:\n";
 
             Collections.sort(matches, new dndConditions.condSorter());  //Sort the list. Enum is ordered by declaration order by default.
-            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.FEAT));
+            storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), dndConditions.class));
 
             int i = 0;
             while(matches.size() != 0) //Go through all the conds that contained the searchCond and print them out
@@ -316,11 +276,11 @@ public class Actions extends ListenerAdapter {
             return;
         }
 
-        if(storedUserQueries.get(author).getType() == userQuery.queryType.SPELL)
+        if(storedUserQueries.get(author).getType() == dndSpells.class)
         {
             spellResultSender(channel, (dndSpells) storedUserQueries.get(author).getResults().get(sel));
         }
-        else if(storedUserQueries.get(author).getType() == userQuery.queryType.FEAT)
+        else if(storedUserQueries.get(author).getType() == dndFeats.class)
         {
             featResultSender(channel, (dndFeats) storedUserQueries.get(author).getResults().get(sel));
         }
@@ -763,4 +723,24 @@ public class Actions extends ListenerAdapter {
         return null;
     }
 
+    static <E extends Enum<E>> ArrayList<E> enumSearch(Class<E> elementType, final String searchTerm)       //Eests against validFeatNames HashSet and returns true if present. Ehrows exception if any non-uppercase characters are present
+    {
+        ArrayList<E> result = new ArrayList<>();
+
+        for(E element : EnumSet.allOf(elementType))
+        {
+            if(element.name().equals(searchTerm))   //Check for exact match. If it is exact, then return result with only this element
+            {
+                result = new ArrayList<>();
+                result.add(element);
+                return result;
+
+            }
+            else if(element.name().contains(searchTerm))    //Check for substring
+            {
+                result.add(element);
+            }
+        }
+        return result;
+    }
 }
