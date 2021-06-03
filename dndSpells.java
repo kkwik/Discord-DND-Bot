@@ -1,6 +1,9 @@
 import java.util.*;
 
-//Enum that determines what a valid spell is. Each field contains a properly formatted string name, it's level, school, and an array Of what classes can use the spell
+/**
+ * An Enum that represents all valid spells the bot knows.
+ * Each value contains a formatted name, spell level, spell school, and a HashSet of the classes that can use it
+ */
 public enum dndSpells {
     //PHB Spells
     ACIDSPLASH ("Acid Splash", (byte)0, dndSpellSchool.CONJURATION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WIZARD}),
@@ -485,18 +488,42 @@ public enum dndSpells {
     TASHASMINDWHIP ("Tasha's Mind Whip", (byte)2, dndSpellSchool.ENCHANTMENT, new dndClasses[]{dndClasses.SORCERER, dndClasses.WIZARD}),
     TASHASOTHERWORLDLYGUISE ("Tasha's Otherworldly Guise", (byte)6, dndSpellSchool.TRANSMUTATION, new dndClasses[]{dndClasses.SORCERER, dndClasses.WARLOCK, dndClasses.WIZARD});
 
-    private final String spellName;                                         //The spells fully punctuated name used for text ouput
-    private final byte level;                                               //The spells level
-    private final dndSpellSchool school;                                    //The spells school
-    private final HashSet<dndClasses> classes = new HashSet<>();            //A HashSet of the classes this spell is used by
-    private static final int size = dndSpells.values().length;              //The amount of spells
+    /**
+     * A member field storing the spells fully formatted name used for text output to the user
+     */
+    private final String spellName;
+    /**
+     * A member field storing the spells level
+     */
+    private final byte level;
+    /**
+     * A member field storing the spells school
+     */
+    private final dndSpellSchool school;
+    /**
+     * A member field hashset storing all classes this spell can be used by
+     */
+    private final HashSet<dndClasses> classes = new HashSet<>();
+    /**
+     * A static member field storing how many spells there are
+     */
+    private static final int size = dndSpells.values().length;
+    /**
+     * A static member field storing a list of all spells values. Uppercase, letters only.
+     */
     private static final HashSet<String> validFormattedNames = new HashSet<String>();     //A HashSet of the valid spell names. Uppercase only.
     static{
         for(dndSpells name : EnumSet.allOf(dndSpells.class))
             validFormattedNames.add(name.name());
     }
 
-    //This enum contains all the spells, spellnames, level Of the spell, the school Of the spell, and a list Of classes that can use it
+    /**
+     * Constructor for the dndSpells enum
+     * @param spellName The fully punctuated and formatted name of the spell
+     * @param level The level of the spell
+     * @param school The school the spell belongs to
+     * @param classes An array of all classes this spell can be used by
+     */
     dndSpells(final String spellName, final byte level, final dndSpellSchool school, final dndClasses[] classes) {
         this.spellName = spellName;
         this.level = level;
@@ -505,11 +532,27 @@ public enum dndSpells {
             this.classes.add(cl);
     }
 
+    /**
+     * Overriding the toString function to return the properly punctuated spell name
+     * @return A string that is the fully punctuated spell name
+     */
     @Override   
-    public String toString(){return spellName;}                         //Overriding toString() to return the punctuated name of the spell
+    public String toString()
+    {
+        return spellName;
+    }
 
+    /**
+     * A Comparator class used to sort spells based on String comparison
+     */
     static class spellSorter implements Comparator<dndSpells>
     {
+        /**
+         * Overriden compare method that uses String.compareTo(String)
+         * @param a The first spell to compare with
+         * @param b The spell to compare against
+         * @return The value returned by String.compareTo(String)
+         */
         @Override
         public int compare(dndSpells a, dndSpells b)
         {
@@ -517,16 +560,45 @@ public enum dndSpells {
         }
     }
 
+    /**
+     * Checks if the provided String is contained in the Enum
+     * @param searchForSpell The name of the spell to check for
+     * @return A boolean value, true if the String is a valid spell name and false otherwise
+     * @throws IllegalArgumentException
+     */
     protected static boolean isValid(final String searchForSpell)       //Tests against validSpellNames HashSet and returns true if present. Throws exception if any non-uppercase characters are present
     {
+        //TODO: Check for any non uppercase letters, not for all
         if(searchForSpell.replaceAll("[^A-Z]","").length() == 0)
             throw new IllegalArgumentException();
         return validFormattedNames.contains(searchForSpell);
     }
-
-
-    protected byte getLevel(){return level;}
-    protected dndSpellSchool getSchool(){return school;}
-    protected Set<dndClasses> getSpellClasses(){return Collections.unmodifiableSet(classes);}
-    protected int getSize(){return size;}
+    /**
+     * Returns the level of this spell
+     * @return A byte representing the level of this spell
+     */
+    protected byte getLevel() {
+        return level;
+    }
+    /**
+     * Returns a dndSpellSchool enum value which is the school this spell belongs to
+     * @return A dndSpellSchool enum value which is the school this spell belongs to
+     */
+    protected dndSpellSchool getSchool() {
+        return school;
+    }
+    /**
+     * Returns a set of dndClasses that can use this spell
+     * @return A Set containing all dndClasses that can use this spell
+     */
+    protected Set<dndClasses> getSpellClasses() {
+        return Collections.unmodifiableSet(classes);
+    }
+    /**
+     * Returns how many spells are in the enum
+     * @return An integer representing the number of spells in the enum
+     */
+    protected int getSize() {
+        return size;
+    }
 }

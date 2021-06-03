@@ -1,16 +1,27 @@
 import java.util.EnumSet;
 import java.util.HashSet;
 
-//Enum that determines what a valid class is
+/**
+ * An Enum that represents all valid classes the bot knows.
+ */
 public enum dndClasses {
     ARTIFICER, BARBARIAN, BARD, CLERIC, DRUID, FIGHTER, MONK, PALADIN, RANGER, ROGUE, SORCERER, WARLOCK, WIZARD;   //All valid classes
 
+    /**
+     * A static member field storing a list of all class values. Uppercase, letters only.
+     */
     private static final HashSet<String> validClasses = new HashSet<String>();  //HashSet of all valid class names
     static{
         for(dndClasses dndClass : EnumSet.allOf(dndClasses.class))
             validClasses.add(dndClass.name());
     }
 
+    /**
+     * Checks if the provided String is contained in the Enum
+     * @param searchForClass The name of the class to check for
+     * @return A boolean value, true if the String is a valid class name and false otherwise
+     * @throws IllegalArgumentException
+     */
     protected static boolean isValid(final String searchForClass)  //Tests against validClasses HashSet and returns true if present. Throws exception if any non-uppercase characters are present
     {
         if(searchForClass.replaceAll("[^A-Z]","").length() == 0)
@@ -18,6 +29,11 @@ public enum dndClasses {
         return validClasses.contains(searchForClass);
     }
 
+    /**
+     * Finds and returns the closest class name to the search string.
+     * @param searchClass The name of the class to search for
+     * @return An enum value of dndClasses that is the closest value to the search string or null if no school was close
+     */
     protected static dndClasses findClosestClass(final String searchClass)
     {
         if(searchClass.replaceAll("[^A-Z]","").length() == 0)
