@@ -155,32 +155,32 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Search through spells   */
-        final ArrayList<dndSpells> matches = new ArrayList<>();   //This ArrayList stores every spell that has the searchTerm as a substring. Essentially it holds a list of spells that might be the one the user is searching for
-        dndSpells exactMatch = null;                                //This dndSpells is null by default but is assigned a dndSpells enum if the searchTerm exactly matches a spell. Essentially if this isn't null an exact match for the search term was found.
+        final ArrayList<dndSpell> matches = new ArrayList<>();   //This ArrayList stores every spell that has the searchTerm as a substring. Essentially it holds a list of spells that might be the one the user is searching for
+        dndSpell exactMatch = null;                                //This dndSpell is null by default but is assigned a dndSpell enum if the searchTerm exactly matches a spell. Essentially if this isn't null an exact match for the search term was found.
 
-        if(dndSpells.isValid(searchSpell))  //Check if there is a valid spell that exactly matches the searchTerm.
+        if(dndSpell.isValid(searchSpell))  //Check if there is a valid spell that exactly matches the searchTerm.
         {
-            exactMatch = dndSpells.valueOf(searchSpell);
+            exactMatch = dndSpell.valueOf(searchSpell);
         }
         else
         {
-            //Iterate through all spells in dndSpells and add any spell that searchTerm is a substring of
-            for(dndSpells searchAgainstSpell : EnumSet.allOf(dndSpells.class))                              //Go through the list of spells
+            //Iterate through all spells in dndSpell and add any spell that searchTerm is a substring of
+            for(dndSpell searchAgainstSpell : EnumSet.allOf(dndSpell.class))                              //Go through the list of spells
                 if (searchAgainstSpell.name().contains(searchSpell))     //If the spell we are currently comparing against contains the term we are searching for
                     matches.add(searchAgainstSpell);
         }
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1) //If an exact match to searchSpell or only one spell in dndSpells contained searchSpell, then retrieve file and respond to message
+        if(exactMatch != null || matches.size() == 1) //If an exact match to searchSpell or only one spell in dndSpell contained searchSpell, then retrieve file and respond to message
         {
-            final dndSpells imageName = (exactMatch != null ? exactMatch : matches.remove(0));
+            final dndSpell imageName = (exactMatch != null ? exactMatch : matches.remove(0));
             return spellResultSender(channel, imageName);
         }
         else if(matches.size() != 0) //Multiple spells were found that contained searchSpell. ex. searchSpell = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
         {
             String response = "Hmm... I found a couple of spells that remind me of that one:\n";
 
-            Collections.sort(matches, new dndSpells.spellSorter());  //Sort the list. Enum is ordered by declaration order by default.
+            Collections.sort(matches, new dndSpell.spellSorter());  //Sort the list. Enum is ordered by declaration order by default.
             storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.SPELL));
 
             int i = 0;
@@ -222,32 +222,32 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Search through feats   */
-        final ArrayList<dndFeats> matches = new ArrayList<>();   //This ArrayList stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
-        dndFeats exactMatch = null;                                //This dndFeats is null by default but is assigned a dndFeats enum if the searchTerm exactly matches a feat. Essentially if this isn't null an exact match for the search term was found.
+        final ArrayList<dndFeat> matches = new ArrayList<>();   //This ArrayList stores every feat that has the searchTerm as a substring. Essentially it holds a list of feats that might be the one the user is searching for
+        dndFeat exactMatch = null;                                //This dndFeat is null by default but is assigned a dndFeat enum if the searchTerm exactly matches a feat. Essentially if this isn't null an exact match for the search term was found.
 
-        if(dndFeats.isValid(searchFeat))  //Check if there is a valid feat that exactly matches the searchTerm.
+        if(dndFeat.isValid(searchFeat))  //Check if there is a valid feat that exactly matches the searchTerm.
         {
-            exactMatch = dndFeats.valueOf(searchFeat);
+            exactMatch = dndFeat.valueOf(searchFeat);
         }
         else
         {
-            //Iterate through all feats in dndFeats and add any feat that searchTerm is a substring of
-            for(dndFeats searchAgainstFeat : EnumSet.allOf(dndFeats.class))                              //Go through the list of feats
+            //Iterate through all feats in dndFeat and add any feat that searchTerm is a substring of
+            for(dndFeat searchAgainstFeat : EnumSet.allOf(dndFeat.class))                              //Go through the list of feats
                 if (searchAgainstFeat.name().contains(searchFeat))     //If the feat we are currently comparing against contains the term we are searching for
                     matches.add(searchAgainstFeat);
         }
 
         /*  Handle results  */
-        if(exactMatch != null || matches.size() == 1) //If an exact match to searchFeat or only one feat in dndFeats contained searchFeat, then retrieve file and respond to message
+        if(exactMatch != null || matches.size() == 1) //If an exact match to searchFeat or only one feat in dndFeat contained searchFeat, then retrieve file and respond to message
         {
-            final dndFeats imageName = (exactMatch != null ? exactMatch : matches.remove(0));
+            final dndFeat imageName = (exactMatch != null ? exactMatch : matches.remove(0));
             return featResultSender(channel, imageName);
         }
         else if(matches.size() != 0) //Multiple feats were found that contained searchFeat. ex. searchFeat = "FIRE" would return "FIREBOLT", "FIREBALL", etc...
         {
             String response = "Hmm... I found a couple of feats that remind me of that one:\n";
 
-            Collections.sort(matches, new dndFeats.featSorter());  //Sort the list. Enum is ordered by declaration order by default.
+            Collections.sort(matches, new dndFeat.featSorter());  //Sort the list. Enum is ordered by declaration order by default.
             storedUserQueries.put(author, new userQuery(author, new ArrayList<>(matches), userQuery.queryType.FEAT));
 
             int i = 0;
@@ -368,15 +368,15 @@ public class Actions extends ListenerAdapter {
 
         if(storedUserQueries.get(author).getType() == userQuery.queryType.SPELL)
         {
-            spellResultSender(channel, (dndSpells) storedUserQueries.get(author).getResults().get(sel));
+            spellResultSender(channel, (dndSpell) storedUserQueries.get(author).getResults().get(sel));
         }
         else if(storedUserQueries.get(author).getType() == userQuery.queryType.FEAT)
         {
-            featResultSender(channel, (dndFeats) storedUserQueries.get(author).getResults().get(sel));
+            featResultSender(channel, (dndFeat) storedUserQueries.get(author).getResults().get(sel));
         }
     }
 
-    //;spellList command. Searches through the dndSpells enum and responds with a list of all spells matching the query
+    //;spellList command. Searches through the dndSpell enum and responds with a list of all spells matching the query
     //Format: ;spellList class:[class] level:[level] school:[school]. ex. ";spellList class:Bard level:0 school:evocation"
     //You can include multiple of a single argument (ie "class:Bard class:Wizard") and it will be treated as OR
     /**
@@ -410,7 +410,7 @@ public class Actions extends ListenerAdapter {
         }
 
         /*  Parse Command   */
-        final ArrayList<dndClasses> classFilter = new ArrayList<>();      //Holds every class to look for
+        final ArrayList<dndClass> classFilter = new ArrayList<>();      //Holds every class to look for
         final ArrayList<Byte> levelFilter = new ArrayList<>();            //Holds every level to look for
         final ArrayList<dndSpellSchool> schoolFilter = new ArrayList<>(); //Holds every school to look for
         for(String arg : terms)
@@ -426,7 +426,7 @@ public class Actions extends ListenerAdapter {
             {   //Parse class: argument
                 String argClass = argParts[1];
 
-                final dndClasses filterClass = dndClasses.findClosestClass(argClass);
+                final dndClass filterClass = dndClass.findClosestClass(argClass);
                 if (filterClass != null)
                 {   //Class: represents a valid class name, add it to filter list
                     classFilter.add(filterClass);
@@ -479,7 +479,7 @@ public class Actions extends ListenerAdapter {
 
         /*  Search through spell enum for spell that matches filters   */
         final ArrayDeque<String> spellList = new ArrayDeque<>();
-        for(dndSpells spell : EnumSet.allOf(dndSpells.class))
+        for(dndSpell spell : EnumSet.allOf(dndSpell.class))
         {
             boolean classPass = false, levelPass = false, schoolPass = false;   //Default to fail
 
@@ -487,8 +487,8 @@ public class Actions extends ListenerAdapter {
                 classPass = true;   //If no class filter is specified, then set to true. We don't need to search
             else
             {   //Go through the classes 'spell' is used by, and if any class on the filter matches then set to true
-                Set<dndClasses> spellClasses = spell.getSpellClasses();
-                for(dndClasses cl : spellClasses)
+                Set<dndClass> spellClasses = spell.getSpellClasses();
+                for(dndClass cl : spellClasses)
                 {
                     if(classFilter.contains(cl))
                     {
@@ -531,7 +531,7 @@ public class Actions extends ListenerAdapter {
 
             //List filters used to verify the interpreted query was correct
             String response = "The spells that match ";
-            for(dndClasses cl : classFilter)
+            for(dndClass cl : classFilter)
                 response += String.format("`CLASS:%s` ", cl.name());
             for(dndSpellSchool sc : schoolFilter)
                 response += String.format("`SCHOOL:%s` ", sc.name());
@@ -574,7 +574,7 @@ public class Actions extends ListenerAdapter {
             return;
         }
 
-        if(!dndClasses.isValid(parsedMessage[0]))
+        if(!dndClass.isValid(parsedMessage[0]))
         {   //If the class isn't a valid class then error message and exit
             channel.sendMessage("Invalid class name").queue();
             return;
@@ -809,10 +809,10 @@ public class Actions extends ListenerAdapter {
     /**
      * Function used to send the image result of a ;spell search to a channel
      * @param channel The channel to send the image in
-     * @param cond The dndSpell selected to send
+     * @param spell The dndSpell selected to send
      * @return A String, null if success or an error message otherwise
      */
-    private String spellResultSender(final MessageChannel channel, dndSpells spell)
+    private String spellResultSender(final MessageChannel channel, dndSpell spell)
     {
         final String classesUsedBy = spell.getSpellClasses().toString();
         final String formattedClassesUsedBy = classesUsedBy.substring(1, classesUsedBy.length() - 1).toLowerCase();
@@ -829,10 +829,10 @@ public class Actions extends ListenerAdapter {
     /**
      * Function used to send the image result of a ;feat search to a channel
      * @param channel The channel to send the image in
-     * @param cond The dndFeats selected to send
+     * @param feat The dndFeat selected to send
      * @return A String, null if success or an error message otherwise
      */
-    private String featResultSender(final MessageChannel channel, dndFeats feat)
+    private String featResultSender(final MessageChannel channel, dndFeat feat)
     {
         String returnVal = imageSender(Paths.get(Main.executionDirLocation,"IMAGES", "FEATS", feat.name() + ".PNG").toString(), null, channel);
 

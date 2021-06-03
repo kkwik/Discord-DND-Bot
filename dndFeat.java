@@ -8,7 +8,7 @@ import java.util.HashSet;
  * An Enum that represents all valid feats the bot knows.
  * Each value contains a formatted name
  */
-public enum dndFeats {
+public enum dndFeat {
     //PHB feats
     ACTOR ("Actor"),
     ALERT ("Alert"),
@@ -94,21 +94,21 @@ public enum dndFeats {
     /**
      * A static member field storing how many feats there are
      */
-    private static final int size = dndFeats.values().length;
+    private static final int size = dndFeat.values().length;
     /**
      * A static member field storing a list of all feat values. Uppercase, letters only.
      */
     private static final HashSet<String> validFeatNames = new HashSet<String>();
     static{
-        for(dndFeats name : EnumSet.allOf(dndFeats.class))
+        for(dndFeat name : EnumSet.allOf(dndFeat.class))
             validFeatNames.add(name.name());
     }
 
     /**
-     * Constructor for the dndFeats enum
+     * Constructor for the dndFeat enum
      * @param featName The fully punctuated name for the feat
      */
-    dndFeats(final String featName) {
+    dndFeat(final String featName) {
         this.featName = featName;
     }
 
@@ -125,7 +125,7 @@ public enum dndFeats {
     /**
      * A Comparator class used to sort feats based on String comparison
      */
-    static class featSorter implements Comparator<dndFeats>
+    static class featSorter implements Comparator<dndFeat>
     {
         /**
          * Overriden compare method that uses String.compareTo(String)
@@ -134,7 +134,7 @@ public enum dndFeats {
          * @return The value returned by String.compareTo(String)
          */
         @Override
-        public int compare(dndFeats a, dndFeats b)
+        public int compare(dndFeat a, dndFeat b)
         {
             return a.toString().compareTo(b.toString());
         }

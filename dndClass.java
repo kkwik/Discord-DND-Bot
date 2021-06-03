@@ -4,7 +4,7 @@ import java.util.HashSet;
 /**
  * An Enum that represents all valid classes the bot knows.
  */
-public enum dndClasses {
+public enum dndClass {
     ARTIFICER, BARBARIAN, BARD, CLERIC, DRUID, FIGHTER, MONK, PALADIN, RANGER, ROGUE, SORCERER, WARLOCK, WIZARD;   //All valid classes
 
     /**
@@ -12,7 +12,7 @@ public enum dndClasses {
      */
     private static final HashSet<String> validClasses = new HashSet<String>();  //HashSet of all valid class names
     static{
-        for(dndClasses dndClass : EnumSet.allOf(dndClasses.class))
+        for(dndClass dndClass : EnumSet.allOf(dndClass.class))
             validClasses.add(dndClass.name());
     }
 
@@ -32,14 +32,14 @@ public enum dndClasses {
     /**
      * Finds and returns the closest class name to the search string.
      * @param searchClass The name of the class to search for
-     * @return An enum value of dndClasses that is the closest value to the search string or null if no school was close
+     * @return An enum value of dndClass that is the closest value to the search string or null if no school was close
      */
-    protected static dndClasses findClosestClass(final String searchClass)
+    protected static dndClass findClosestClass(final String searchClass)
     {
         if(searchClass.replaceAll("[^A-Z]","").length() == 0)
             throw new IllegalArgumentException();
 
-        for(dndClasses dndClass : EnumSet.allOf(dndClasses.class))
+        for(dndClass dndClass : EnumSet.allOf(dndClass.class))
             if(dndClass.name().contains(searchClass))
                 return dndClass;
 
