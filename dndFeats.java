@@ -4,6 +4,10 @@ import java.util.HashSet;
 
 
 //Enum that determines what a valid feat is. Each field contains a properly formatted string name
+/**
+ * An Enum that represents all valid feats the bot knows.
+ * Each value contains a formatted name
+ */
 public enum dndFeats {
     //PHB feats
     ACTOR ("Actor"),
@@ -83,36 +87,77 @@ public enum dndFeats {
     TELEKINETIC ("Telekinetic"),
     TELEPATHIC ("Telepathic");
 
-    private final String featName;                                         //The feats fully punctuated name used for text output
-    private static final int size = dndFeats.values().length;              //The amount of feats
-    private static final HashSet<String> validFeatNames = new HashSet<String>();     //A HashSet of the valid feat names. Uppercase only.
+    /**
+     * A member field storing the conditions fully formatted name used for text output to the user
+     */
+    private final String featName;
+    /**
+     * A static member field storing how many feats there are
+     */
+    private static final int size = dndFeats.values().length;
+    /**
+     * A static member field storing a list of all feat values. Uppercase, letters only.
+     */
+    private static final HashSet<String> validFeatNames = new HashSet<String>();
     static{
         for(dndFeats name : EnumSet.allOf(dndFeats.class))
             validFeatNames.add(name.name());
     }
 
-    //This enum contains all the feats and featnames
+    /**
+     * Constructor for the dndFeats enum
+     * @param featName The fully punctuated name for the feat
+     */
     dndFeats(final String featName) {
         this.featName = featName;
     }
 
+    /**
+     * Overriding the toString function to return the properly punctuated feat name
+     * @return A string that is the fully punctuated feat name
+     */
     @Override
-    public String toString(){return featName;}                         //Overriding toString() to return the punctuated name of the feat
+    public String toString()
+    {
+        return featName;
+    }
 
+    /**
+     * A Comparator class used to sort feats based on String comparison
+     */
     static class featSorter implements Comparator<dndFeats>
     {
+        /**
+         * Overriden compare method that uses String.compareTo(String)
+         * @param a The first feat to compare with
+         * @param b The feat to compare against
+         * @return The value returned by String.compareTo(String)
+         */
         @Override
         public int compare(dndFeats a, dndFeats b)
         {
             return a.toString().compareTo(b.toString());
         }
     }
-
+    /**
+     * Checks if the provided String is contained in the Enum
+     * @param searchForFeat The name of the feat to check for
+     * @return A boolean value, true if the String is a valid feat name and false otherwise
+     * @throws IllegalArgumentException
+     */
     protected static boolean isValid(final String searchForFeat)       //Tests against validFeatNames HashSet and returns true if present. Throws exception if any non-uppercase characters are present
     {
+        //TODO: Check for any non uppercase letters, not for all
         if(searchForFeat.replaceAll("[^A-Z]","").length() == 0)
             throw new IllegalArgumentException();
         return validFeatNames.contains(searchForFeat);
     }
-    protected int getSize(){return size;}
+    /**
+     * Returns how many feats are in the enum
+     * @return An integer representing the number of feats in the enum
+     */
+    protected int getSize()
+    {
+        return size;
+    }
 }

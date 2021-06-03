@@ -13,10 +13,20 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Actions extends ListenerAdapter {
-    //Stores at most one query per user if the user searches for a spell/feat that had multiple possible results
+    /**
+     * A Hashtable that associates a user with a stored query
+     * Stored queries are queries such as ;spell that return a list of possible results
+     * Being a Hashtable a user can have only one stored query at a time
+     * The ;re command retrieves the contents of the stored query. This result is not cleared afterwards
+     */
     static Hashtable<User, userQuery<?>> storedUserQueries = new Hashtable<>();
 
-    @Override   //This method is triggered everytime a message is sent in the discord server
+    /**
+     * onGuildMessageReceived is called when a message in a server is sent.
+     * This is called automatically by JDA
+     * @param event The message event that triggered this method
+     */
+    @Override
     public void onGuildMessageReceived(final GuildMessageReceivedEvent event)
     {
         if (!event.getChannel().canTalk() || event.getAuthor().isBot() || !Main.guildWhitelist.contains(event.getChannel().getGuild().getIdLong()))   //If the message was sent in a channel our bot can't respond in, by a bot, or isn't on the whitelist then ignore it
@@ -25,7 +35,12 @@ public class Actions extends ListenerAdapter {
 
     }
 
-    @Override   //This method is triggered by private messages to the bot
+    /**
+     * onPrivateMessageReceived is called when a private message is sent to the bot.
+     * This is called automatically by JDA
+     * @param event The message event that triggered this method
+     */
+    @Override
     public void onPrivateMessageReceived(final PrivateMessageReceivedEvent event)
     {
         if(event.getAuthor().isBot())   //If the message sent is from a bot, then ignore it
@@ -34,6 +49,12 @@ public class Actions extends ListenerAdapter {
     }
 
     //This method separates the first string separated by " " and uses a switch on that term to determine what to do
+
+    /**
+     * This function is the first step in interpreting the user's command.
+     * Based on the first space delimited string it will call different functions.
+     * @param messageEvent The messageEvent object which triggered the call
+     */
     private void topLevelHandler(final MessageEvent messageEvent)
     {
         final String message = messageEvent.getMessage();
@@ -110,8 +131,14 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //;spell command. Returns an image of the spell or a list of similar spells. Note: images of the PHB are not included in this repository
-    //Format: ;spell [string here]. ex. ";spell fire bolt"
+    /**
+     * This function corresponds to the ";spell" command.
+     * Returns an image of the user specified spell or a list of similar spells
+     * @param searchTerm The search term the user specified
+     * @param channel The channel the message was sent in
+     * @param author The author of the message
+     * @return A string if an error occurred but null otherwise
+     */
     private String spellCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
     {
         if(searchTerm.equals("HELP"))
@@ -171,7 +198,14 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //;feat command, mechanically identical to ;spell
+    /**
+     * This function corresponds to the ";feat" command.
+     * Returns an image of the user specified feat or a list of similar feats
+     * @param searchTerm The search term the user specified
+     * @param channel The channel the message was sent in
+     * @param author The author of the message
+     * @return A string if an error occurred but null otherwise
+     */
     private String featCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
     {
         if(searchTerm.equals("HELP"))
@@ -231,6 +265,14 @@ public class Actions extends ListenerAdapter {
         }
     }
 
+    /**
+     * This function corresponds to the ";cond" command.
+     * Returns an image of the user specified condition or a list of similar conditions
+     * @param searchTerm The search term the user specified
+     * @param channel The channel the message was sent in
+     * @param author The author of the message
+     * @return A string if an error occurred but null otherwise
+     */
     private String condCommandHandler(String searchTerm, final MessageChannel channel, final User author)    //searchTerm is all uppercase
     {
         if(searchTerm.equals("HELP"))
@@ -290,7 +332,15 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //Responds to ;re by sending the image that corresponds to the item at index 'selection' in that user's latest stored query
+    /**
+     * This function corresponds to the ";re" command.
+     * This command is used after using a search command (;spell, ;feat, ;cond) that returned a list of items.
+     * The index of the item in that list is provided with the ;re command and this function then calls the relevant function to send the result
+     * @param author The author of the message
+     * @param selection The index of the item to select
+     * @param channel The channel the message was sent in
+     * @see Actions#storedUserQueries
+     */
     private void responseCommandHandler(final User author, String selection, final MessageChannel channel)
     {
         if(!storedUserQueries.containsKey(author))
@@ -329,6 +379,13 @@ public class Actions extends ListenerAdapter {
     //;spellList command. Searches through the dndSpells enum and responds with a list of all spells matching the query
     //Format: ;spellList class:[class] level:[level] school:[school]. ex. ";spellList class:Bard level:0 school:evocation"
     //You can include multiple of a single argument (ie "class:Bard class:Wizard") and it will be treated as OR
+    /**
+     * This function corresponds to the ";spellList" command
+     * Returns a list of spells that match the filters provided
+     * @param searchTerm A list of filters based on class, level, and school
+     * @param channel The channel the message was sent in
+     * @param author The author of the message
+     */
     private void spellListCommandHandler(String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP"))
@@ -489,7 +546,13 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //Used to send information about a dnd class
+    /**
+     * This function corresponds to the ";class" command.
+     * Returns images of information on the specified class
+     * @param searchTerm The search term the user specified
+     * @param channel The channel the message was sent in
+     * @param author The author of the message
+     */
     private void classCommandHandler(String searchTerm, final MessageChannel channel, final User author)
     {
         if(searchTerm.equals("HELP"))
@@ -542,7 +605,12 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //Handles commands that only the admin should have access too
+    /**
+     * Function that handles commands which only the admin should have access to
+     * @param term The rest of the command provided by the user
+     * @param channel The channel the message was sent in
+     * @param author The author of the message
+     */
     private void adminCommandHandler(String term, final MessageChannel channel, final User author)
     {
         if(author.getIdLong() != PersonalData.ADMIN_ID) { //Only allow ADMIN to use these commands
@@ -592,7 +660,10 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //Admin command used to printout interesting bot usage statistics
+    /**
+     * Function that responds to an admin command with specific usage statistics
+     * @param channel The channel the message originated in
+     */
     private void usageCommandHandler(final MessageChannel channel) {
         long currTime = System.currentTimeMillis();
         String response = String.format("Total calls: %d\n", Main.usageStat);               //Print out amount of times the bot was called since uptime
@@ -641,7 +712,10 @@ public class Actions extends ListenerAdapter {
         largeMessageSender(response, channel);  //Send message
     }
 
-    //Increments usageStat which represents total calls, adds a usageStat to the queue, and calls updateUsageStats()
+    /**
+     * Function that is called to update usage statistics and calls updateUsageStats afterwards
+     * @param messageEvent The Message that triggered this call
+     */
     private void addAndUpdateUsageStats(final MessageEvent messageEvent)
     {
         Main.usageStat++;
@@ -650,7 +724,10 @@ public class Actions extends ListenerAdapter {
         updateUsageStats();
     }
 
-    //Prunes usageStatQueue of all entries older than an hour
+    /**
+     * Function that prunes the usageStatQueue of all entries older than one hour
+     * @see Main#usageStatQueue
+     */
     private void updateUsageStats()
     {
         final long hrPast = System.currentTimeMillis() - 3600000;
@@ -658,7 +735,12 @@ public class Actions extends ListenerAdapter {
             Main.usageStatQueue.removeFirst();
     }
 
-    //Admin command that handles guild related stuff
+    /**
+     * A function intended to handle a suite of guild related commands
+     * Currently only lists servers the bot is in
+     * @param term The subcommand of guild to execute
+     * @param channel The channel the message was sent in
+     */
     private void guildCommandHandler(final String term, final MessageChannel channel)
     {
         final String[] parsedMessage = separateFirstTerm(term);
@@ -674,7 +756,12 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //Report errors to administrator
+    /**
+     * A function called when an abnormal error occurs.
+     * Sends a message to the admin
+     * @param messageEvent  The message that caused the error
+     * @param errorMsg The error message that was generated
+     */
     private void reportError(final MessageEvent messageEvent, final String errorMsg)
     {
 
@@ -685,8 +772,12 @@ public class Actions extends ListenerAdapter {
         Main.bot.getUserById(PersonalData.ADMIN_ID).openPrivateChannel().complete().sendMessage(errorReport).queue();
     }
 
-
-    //Turns "spell Hello World" into {"spell", "Hello World"} or "help" into {"help", ""}
+    /**
+     * A function used to seperate the first space delimited chunk of a string.
+     * Likely replaceable by String.split(String regex, int limit), will look into
+     * @param term The source string
+     * @return An array containing the 'head' of the space delimited string and the tail
+     */
     private String[] separateFirstTerm(final String term)
     {
         if(term.contains(" ")) {
@@ -696,7 +787,12 @@ public class Actions extends ListenerAdapter {
         return new String[]{term, ""};
     }
 
-    //used to send text messages that might be very large. Breaks the message down into smaller chunks
+    /**
+     * A function used to send a string that is excessively large (> 2000 characters)
+     * It breaks the message into chunks to send
+     * @param inputMessage The String message to send
+     * @param channel The channel to send the message in
+     */
     private void largeMessageSender(final String inputMessage, final MessageChannel channel)
     {
         String message = inputMessage;
@@ -710,6 +806,12 @@ public class Actions extends ListenerAdapter {
             channel.sendMessage(message).queue();
     }
 
+    /**
+     * Function used to send the image result of a ;spell search to a channel
+     * @param channel The channel to send the image in
+     * @param cond The dndSpell selected to send
+     * @return A String, null if success or an error message otherwise
+     */
     private String spellResultSender(final MessageChannel channel, dndSpells spell)
     {
         final String classesUsedBy = spell.getSpellClasses().toString();
@@ -724,6 +826,12 @@ public class Actions extends ListenerAdapter {
         }
     }
 
+    /**
+     * Function used to send the image result of a ;feat search to a channel
+     * @param channel The channel to send the image in
+     * @param cond The dndFeats selected to send
+     * @return A String, null if success or an error message otherwise
+     */
     private String featResultSender(final MessageChannel channel, dndFeats feat)
     {
         String returnVal = imageSender(Paths.get(Main.executionDirLocation,"IMAGES", "FEATS", feat.name() + ".PNG").toString(), null, channel);
@@ -736,6 +844,12 @@ public class Actions extends ListenerAdapter {
         }
     }
 
+    /**
+     * Function used to send the image result of a ;cond search to a channel
+     * @param channel The channel to send the image in
+     * @param cond The dndCondition selected to send
+     * @return A String, null if success or an error message otherwise
+     */
     private String condResultSender(final MessageChannel channel, dndConditions cond)
     {
         String returnVal = imageSender(Paths.get(Main.executionDirLocation,"IMAGES", "CONDS", cond.name() + ".PNG").toString(), null, channel);
@@ -748,7 +862,14 @@ public class Actions extends ListenerAdapter {
         }
     }
 
-    //Generic image sender that checks for valid file and sends image to channel
+    /**
+     * A generic function used to send an image to a channel
+     * Checks for file existence and then attempts to send it
+     * @param path The path to the image locally
+     * @param optionalMessage An optional String message to send along with the image
+     * @param channel The channel to send the image in
+     * @return
+     */
     private String imageSender(final String path, final String optionalMessage, final MessageChannel channel)
     {
         File imageFile = new File(path);    //Used for IDE testing
